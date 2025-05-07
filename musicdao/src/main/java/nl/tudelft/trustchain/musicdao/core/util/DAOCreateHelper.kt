@@ -11,6 +11,7 @@ import nl.tudelft.trustchain.musicdao.core.util.taproot.TaprootUtil
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.ECKey
 
+val MINIMUM_ENTRANCE_FEE = 100000L // 0.01 BTC
 class DAOCreateHelper {
     private fun getTrustChainCommunity(): TrustChainCommunity {
         return IPv8Android.getInstance().getOverlay()
@@ -33,6 +34,7 @@ class DAOCreateHelper {
         threshold: Int,
         context: Context
     ): SWJoinBlockTransactionData {
+        require(entranceFee >= MINIMUM_ENTRANCE_FEE) { "Entrance fee must be at least $MINIMUM_ENTRANCE_FEE" }
         val walletManager = WalletManagerAndroid.getInstance()
         val (_, serializedTransaction) =
             walletManager.safeCreationAndSendGenesisWallet(

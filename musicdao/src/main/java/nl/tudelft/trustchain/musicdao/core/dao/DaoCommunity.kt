@@ -23,7 +23,9 @@ import nl.tudelft.trustchain.musicdao.core.util.sharedWallet.SWTransferFundsAskB
 import nl.tudelft.trustchain.musicdao.core.util.sharedWallet.SWTransferFundsAskTransactionData
 import nl.tudelft.trustchain.musicdao.core.util.DAOCreateHelper
 import nl.tudelft.trustchain.musicdao.core.util.DAOJoinHelper
+import nl.tudelft.trustchain.musicdao.core.util.DAOReputationSystem
 import nl.tudelft.trustchain.musicdao.core.util.DAOTransferFundsHelper
+import kotlin.math.max
 
 @Suppress("UNCHECKED_CAST")
 class DaoCommunity constructor(serviceId: String = "02313685c1912a141279f8248fc8db5899c5df5c") :
@@ -373,18 +375,30 @@ class DaoCommunity constructor(serviceId: String = "02313685c1912a141279f8248fc8
         /**
          * Given a proposal, check if the number of signatures required is met
          */
-        fun checkEnoughFavorSignatures(block: TrustChainBlock): Boolean {
+        fun checkEnoughFavorSignatures(block: TrustChainBlock, considerReputation: Boolean): Boolean {
             if (block.type == SIGNATURE_ASK_BLOCK) {
                 val data = SWSignatureAskTransactionData(block.transaction).getData()
-                val signatures =
-                    ArrayList(
-                        fetchProposalResponses(
-                            data.SW_UNIQUE_ID,
-                            data.SW_UNIQUE_PROPOSAL_ID
-                        )
-                    )
-                return data.SW_SIGNATURES_REQUIRED <= signatures.size
+                val signatures = ArrayList(fetchProposalResponses(data.SW_UNIQUE_ID, data.SW_UNIQUE_PROPOSAL_ID))
+
+                if (!considerReputation) {
+                    return data.SW_SIGNATURES_REQUIRED <= signatures.size
+                }
+
+                // Consider reputation in voting power
+                val reputationSystem = DAOReputationSystem()
+                val totalVotingPower = signatures.sumOf { _ ->
+                    val publicKey = getTrustChainCommunity().database.getBlockWithHash(block.publicKey)?.publicKey
+                    if (publicKey != null) {
+                        val reputation = reputationSystem.calculateReputationScore(publicKey)
+                        max(1, reputation / 10) // Convert reputation to voting power
+                    } else {
+                        1 // Default voting power
+                    }
+                }
+
+                return data.SW_SIGNATURES_REQUIRED <= totalVotingPower
             }
+
             if (block.type == TRANSFER_FUNDS_ASK_BLOCK) {
                 val data = SWTransferFundsAskTransactionData(block.transaction).getData()
                 val signatures =

@@ -13,6 +13,7 @@ object SWUtil {
      * The minimal tx amount defined for creating transactions to avoid dusty transactions
      */
     const val MINIMAL_TRANSACTION_AMOUNT: Int = 5000
+    const val MINIMUM_ENTRANCE_FEE: Long = 1000000 // 0.01 BTC
 
     /**
      * Generate a random 128 bit string
