@@ -238,7 +238,7 @@ class DaoViewModel
                                 (
                                     it.type == CoinCommunity.SIGNATURE_ASK_BLOCK ||
                                         it.type == CoinCommunity.TRANSFER_FUNDS_ASK_BLOCK
-                                ) && !getDaoCommunity().checkEnoughFavorSignatures(it)
+                                ) && !getDaoCommunity().checkEnoughFavorSignatures(it, false)
                             }
                     Log.d(
                         "MVDAO",
