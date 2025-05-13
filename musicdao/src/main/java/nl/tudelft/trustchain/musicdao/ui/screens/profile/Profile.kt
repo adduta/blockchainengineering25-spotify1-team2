@@ -5,10 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.Text
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,28 +30,43 @@ fun Profile(
     navController: NavController
 ) {
     Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
     ) {
         Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(Brush.verticalGradient(listOf(Color(0xFF77DF7C), Color(0xFF70C774))))
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .background(Brush.verticalGradient(listOf(Color(0xFF77DF7C), Color(0xFF70C774))))
         ) {
-            Text(
-                text = artist.name,
-                style = MaterialTheme.typography.h6,
-                modifier =
-                    Modifier
-                        .padding(20.dp)
-                        .align(
-                            Alignment.BottomStart
-                        )
-            )
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .align(Alignment.BottomStart)
+            ) {
+                Text(
+                    text = artist.name,
+                    style = MaterialTheme.typography.h6
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = artist.accountType.displayName,
+                        style = MaterialTheme.typography.subtitle1,
+                        color = Color.White,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
         }
 
         Column(modifier = Modifier.padding(20.dp)) {
@@ -62,6 +76,25 @@ fun Profile(
                 }
                 OutlinedButton(onClick = { navController.navigate(Screen.Donate.createRoute(publicKey = artist.publicKey)) }) {
                     Text(text = "Donate")
+                }
+            }
+
+            Column(modifier = Modifier.padding(bottom = 20.dp)) {
+                Text(text = "Account Status", fontWeight = FontWeight.Bold)
+                Text(text = "Current Level: ${artist.accountType.displayName}")
+                Text(text = "Download Delay: ${artist.accountType.downloadDelayHours} hours")
+                Text(text = "Total Donations: ${artist.totalDonations} BTC")
+                if (artist.accountType == AccountType.BASIC) {
+                    Text(
+                        text = "Required for Pro: ${AccountType.PRO.requiredDonations - artist.totalDonations} BTC more",
+                        color = MaterialTheme.colors.error
+                    )
+                }
+                OutlinedButton(
+                    onClick = { navController.navigate(Screen.AccountUpgrade.route) },
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text(if (artist.accountType == AccountType.BASIC) "Upgrade to Pro" else "Manage Account")
                 }
             }
 
