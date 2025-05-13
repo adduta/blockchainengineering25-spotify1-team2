@@ -20,6 +20,8 @@ import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Artist
 import nl.tudelft.trustchain.musicdao.ui.components.releases.NonLazyReleaseList
 import nl.tudelft.trustchain.musicdao.ui.navigation.Screen
+import nl.tudelft.trustchain.musicdao.core.repositories.model.AccountType
+import nl.tudelft.trustchain.musicdao.core.services.AccountService
 
 @ExperimentalFoundationApi
 @ExperimentalMaterialApi
@@ -27,99 +29,161 @@ import nl.tudelft.trustchain.musicdao.ui.navigation.Screen
 fun Profile(
     artist: Artist,
     releases: List<Album> = listOf(),
-    navController: NavController
+    navController: NavController,
+    accountService: AccountService,
+    onNavigateToUpgrade: () -> Unit,
+    isOwnProfile: Boolean
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .background(Brush.verticalGradient(listOf(Color(0xFF77DF7C), Color(0xFF70C774))))
+        // Artist Name and Account Type
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .align(Alignment.BottomStart)
+            Text(
+                text = artist.name,
+                style = MaterialTheme.typography.h5
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = artist.name,
-                    style = MaterialTheme.typography.h6
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    tint = MaterialTheme.colors.primary
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 4.dp)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = artist.accountType.name,
+                    style = MaterialTheme.typography.subtitle1
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Account Status (only show for own profile)
+        if (isOwnProfile) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = 4.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
+                    Text(
+                        text = "Account Status",
+                        style = MaterialTheme.typography.h6,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
                     Text(
-                        text = artist.accountType.displayName,
+                        text = "Download Delay: ${artist.accountType.downloadDelayHours} hours",
+                        style = MaterialTheme.typography.body1
+                    )
+                    Text(
+                        text = "Total Donations: ${artist.totalDonations} BTC",
+                        style = MaterialTheme.typography.body1
+                    )
+                    if (artist.accountType == AccountType.BASIC) {
+                        val missingDonations = accountService.getMissingDonationsForPro(artist)
+                        Text(
+                            text = "Required for Pro: $missingDonations BTC more",
+                            color = MaterialTheme.colors.error,
+                            style = MaterialTheme.typography.body1
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Account Management Button (only show for own profile)
+            Button(
+                onClick = onNavigateToUpgrade,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = if (artist.accountType == AccountType.BASIC) {
+                        "Upgrade to Pro"
+                    } else {
+                        "Manage Account"
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Artist Information
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = 4.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Artist Information",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = "Public Key: ${artist.publicKey}",
+                    style = MaterialTheme.typography.body2
+                )
+                Text(
+                    text = "Bitcoin Address: ${artist.bitcoinAddress}",
+                    style = MaterialTheme.typography.body2
+                )
+                if (artist.biography.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Biography",
                         style = MaterialTheme.typography.subtitle1,
-                        color = Color.White,
-                        modifier = Modifier.padding(start = 4.dp)
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = artist.biography,
+                        style = MaterialTheme.typography.body1
                     )
                 }
             }
         }
 
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(modifier = Modifier.padding(bottom = 20.dp)) {
-                OutlinedButton(onClick = { }, modifier = Modifier.padding(end = 10.dp)) {
-                    Text(text = "Follow")
-                }
-                OutlinedButton(onClick = { navController.navigate(Screen.Donate.createRoute(publicKey = artist.publicKey)) }) {
-                    Text(text = "Donate")
-                }
-            }
+        Spacer(modifier = Modifier.height(24.dp))
 
-            Column(modifier = Modifier.padding(bottom = 20.dp)) {
-                Text(text = "Account Status", fontWeight = FontWeight.Bold)
-                Text(text = "Current Level: ${artist.accountType.displayName}")
-                Text(text = "Download Delay: ${artist.accountType.downloadDelayHours} hours")
-                Text(text = "Total Donations: ${artist.totalDonations} BTC")
-                if (artist.accountType == AccountType.BASIC) {
-                    Text(
-                        text = "Required for Pro: ${AccountType.PRO.requiredDonations - artist.totalDonations} BTC more",
-                        color = MaterialTheme.colors.error
-                    )
-                }
-                OutlinedButton(
-                    onClick = { navController.navigate(Screen.AccountUpgrade.route) },
-                    modifier = Modifier.padding(top = 8.dp)
+        // Releases Section
+        if (artist.releaseIds.isNotEmpty()) {
+            Text(
+                text = "Releases",
+                style = MaterialTheme.typography.h6,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            artist.releaseIds.forEach { release ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    elevation = 2.dp
                 ) {
-                    Text(if (artist.accountType == AccountType.BASIC) "Upgrade to Pro" else "Manage Account")
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = release,
+                            style = MaterialTheme.typography.subtitle1
+                        )
+                        Text(
+                            text = "Released: $release",
+                            style = MaterialTheme.typography.body2
+                        )
+                    }
                 }
-            }
-
-            Column(modifier = Modifier.padding(bottom = 20.dp)) {
-                Text(text = "Releases", fontWeight = FontWeight.Bold)
-                if (releases.isEmpty()) {
-                    Text("No releases by this artist")
-                } else {
-                    NonLazyReleaseList(releasesState = releases, navController = navController)
-                }
-            }
-
-            Column(modifier = Modifier.padding(bottom = 20.dp)) {
-                Text(text = "Public Key", fontWeight = FontWeight.Bold)
-                Text(text = artist.publicKey)
-            }
-
-            Column(modifier = Modifier.padding(bottom = 20.dp)) {
-                Text(text = "Bitcoin Address", fontWeight = FontWeight.Bold)
-                Text(text = artist.bitcoinAddress)
-            }
-
-            Column(modifier = Modifier.padding(bottom = 20.dp)) {
-                Text(text = "Biography", fontWeight = FontWeight.Bold)
-                Text(text = artist.biography)
             }
         }
     }

@@ -7,18 +7,11 @@ import javax.inject.Singleton
 
 @Singleton
 class AccountService @Inject constructor() {
-    fun calculateAccountType(artist: Artist): AccountType {
-        return AccountType.fromDonationAmount(artist.totalDonations)
-    }
-
     fun canUpgradeAccount(artist: Artist): Boolean {
         val currentType = artist.accountType
         val nextType = when (currentType) {
-            AccountType.BASIC -> AccountType.BRONZE
-            AccountType.BRONZE -> AccountType.SILVER
-            AccountType.SILVER -> AccountType.GOLD
-            AccountType.GOLD -> AccountType.PLATINUM
-            AccountType.PLATINUM -> return false
+            AccountType.BASIC -> AccountType.PRO
+            AccountType.PRO -> return false
         }
         return artist.totalDonations >= nextType.requiredDonations
     }
@@ -26,11 +19,8 @@ class AccountService @Inject constructor() {
     fun getNextUpgradeRequirements(artist: Artist): Pair<AccountType, Double>? {
         val currentType = artist.accountType
         val nextType = when (currentType) {
-            AccountType.BASIC -> AccountType.BRONZE
-            AccountType.BRONZE -> AccountType.SILVER
-            AccountType.SILVER -> AccountType.GOLD
-            AccountType.GOLD -> AccountType.PLATINUM
-            AccountType.PLATINUM -> return null
+            AccountType.BASIC -> AccountType.PRO
+            AccountType.PRO -> return null
         }
         return Pair(nextType, nextType.requiredDonations - artist.totalDonations)
     }
@@ -40,8 +30,11 @@ class AccountService @Inject constructor() {
         return artist.copy(totalDonations = updatedTotalDonations)
     }
 
-    fun upgradeToPro(artist: Artist): Artist {
-        return artist.copy(accountType = AccountType.PRO)
+    fun upgradeToPro(artist: Artist): Result<Artist> {
+        if (!canUpgradeToPro(artist)) {
+            return Result.failure(IllegalStateException("Cannot upgrade to Pro: Insufficient donations"))
+        }
+        return Result.success(artist.copy(accountType = AccountType.PRO))
     }
 
     fun downgradeToBasic(artist: Artist): Artist {
@@ -64,4 +57,4 @@ class AccountService @Inject constructor() {
             0.0
         }
     }
-} 
+}

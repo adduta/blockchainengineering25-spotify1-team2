@@ -9,19 +9,29 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
+import nl.tudelft.trustchain.musicdao.core.services.AccountService
 import nl.tudelft.trustchain.musicdao.ui.components.EmptyState
 
 @ExperimentalMaterialApi
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MyProfileScreen(
-    navController: NavController,
-    profileScreenViewModel: MyProfileScreenViewModel
+    profileScreenViewModel: MyProfileScreenViewModel,
+    navController: NavController
 ) {
     val profile = profileScreenViewModel.profile.collectAsState()
+    val accountService = AccountService()
 
     profile.value?.let {
-        Profile(it, navController = navController)
+        Profile(
+            artist = it,
+            // TODO: Uncomment when releases are available
+            releases = emptyList(),
+            navController = navController,
+            accountService = accountService,
+            onNavigateToUpgrade = { /* Navigate to upgrade screen */ },
+            isOwnProfile = true
+        )
     } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         EmptyState(
             firstLine = "You have not made a profile yet.",

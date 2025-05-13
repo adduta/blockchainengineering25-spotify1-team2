@@ -40,8 +40,11 @@ import nl.tudelft.trustchain.musicdao.ui.navigation.Screen
 import nl.tudelft.trustchain.musicdao.ui.screens.torrent.TorrentStatusScreen
 import dagger.hilt.android.EntryPointAccessors
 import java.io.File
+import android.util.Log
+import androidx.compose.foundation.ExperimentalFoundationApi
 
 @ExperimentalMaterialApi
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReleaseScreen(
     releaseId: String,
@@ -64,6 +67,9 @@ fun ReleaseScreen(
 
     val torrentStatus by viewModel.torrentState.collectAsState()
     val albumState by viewModel.saturatedReleaseState.observeAsState()
+    val canDownload by viewModel.canDownload.collectAsState()
+    val remainingDelay by viewModel.remainingDelay.collectAsState()
+    val playerError by playerViewModel.error.collectAsState()
 
     val playingTrack = playerViewModel.playingTrack.collectAsState()
 
@@ -81,6 +87,12 @@ fun ReleaseScreen(
         track: DownloadingTrack,
         cover: File?
     ) {
+        // Only play if enough of the file is downloaded
+        if (track.progress < 20) {
+            Log.d("MusicDAOTorrent", "Not enough progress to play: ${track.progress}%")
+            return
+        }
+
         playerViewModel.playDownloadingTrack(
             Song(
                 file = track.file,
@@ -93,6 +105,14 @@ fun ReleaseScreen(
     }
 
     val scrollState = rememberScrollState()
+
+    // Show error if any
+    playerError?.let { error ->
+        LaunchedEffect(error) {
+            // Show error in a snackbar or dialog
+            Log.e("MusicDAOTorrent", "Player error: $error")
+        }
+    }
 
     albumState?.let { album ->
         LaunchedEffect(
@@ -107,6 +127,7 @@ fun ReleaseScreen(
                         downloadingTracks.find { it.file.name == current.file?.name }
                             ?: return@collect
 
+                    // Only auto-play if enough progress and not already playing
                     if (!isPlaying && targetTrack.progress > 20 && targetTrack.progress < 99) {
                         play(targetTrack, album.cover)
                     }
@@ -115,106 +136,88 @@ fun ReleaseScreen(
         )
 
         Column(
-            modifier =
-                Modifier
-                    .verticalScroll(scrollState)
-                    .padding(bottom = 150.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
         ) {
+            Header(album, navController)
             TabRow(selectedTabIndex = state) {
                 titles.forEachIndexed { index, title ->
                     Tab(
+                        selected = state == index,
                         onClick = { state = index },
-                        selected = (index == state),
                         text = { Text(title) }
                     )
                 }
             }
-            if (state == 0) {
-                Column(
-                    modifier =
-                        Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .padding(top = 20.dp)
-                ) {
-                    ReleaseCover(
-                        file = album.cover,
-                        modifier =
-                            Modifier
-                                .height(200.dp)
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(10))
-                                .background(Color.DarkGray)
-                                .shadow(10.dp)
-                                .align(Alignment.CenterHorizontally)
-                    )
-                }
-                Header(album, navController = navController)
-                if (album.songs != null && album.songs.isNotEmpty()) {
-                    val files = album.songs
-                    files.map {
-                        val isPlayingModifier =
-                            playingTrack.value?.let { current ->
-                                if (it.title == current.title) {
-                                    MaterialTheme.colors.primary
-                                } else {
-                                    MaterialTheme.colors.onBackground
-                                }
-                            } ?: MaterialTheme.colors.onBackground
-
-                        ListItem(
-                            text = { Text(it.title, color = isPlayingModifier, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            secondaryText = { Text(it.artist, color = isPlayingModifier) },
-                            trailing = {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = null
-                                )
-                            },
-                            modifier = Modifier.clickable { play(it, album.cover) }
-                        )
-                    }
-                } else {
-                    if (torrentStatus != null) {
-                        val downloadingTracks = torrentStatus?.downloadingTracks
-                        downloadingTracks?.map {
+            when (state) {
+                0 -> {
+                    if (album.songs != null && album.songs.isNotEmpty()) {
+                        album.songs.forEach { song ->
                             ListItem(
-                                text = { Text(it.title) },
-                                secondaryText = {
-                                    Column {
-                                        Text(album.artist, modifier = Modifier.padding(bottom = 5.dp))
-                                        LinearProgressIndicator(progress = it.progress.toFloat() / 100)
-                                    }
-                                },
+                                text = { Text(song.title) },
+                                secondaryText = { Text(album.artist) },
                                 trailing = {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = null
-                                    )
-                                },
-                                modifier =
-                                    Modifier.clickable {
-                                        play(it, album.cover)
+                                    IconButton(onClick = { play(song, album.cover) }) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.PlayArrow,
+                                            contentDescription = null
+                                        )
                                     }
+                                }
                             )
                         }
-                        if (downloadingTracks == null || downloadingTracks.isEmpty()) {
-                            Column(
-                                verticalArrangement = Arrangement.Center,
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                CircularProgressIndicator()
+                    } else {
+                        if (torrentStatus != null && canDownload) {
+                            val downloadingTracks = torrentStatus?.downloadingTracks
+                            downloadingTracks?.map {
+                                ListItem(
+                                    text = { Text(it.title) },
+                                    secondaryText = {
+                                        Column {
+                                            Text(album.artist, modifier = Modifier.padding(bottom = 5.dp))
+                                            LinearProgressIndicator(progress = it.progress.toFloat() / 100)
+                                            if (it.progress < 20) {
+                                                Text(
+                                                    "Waiting for enough data to play...",
+                                                    style = MaterialTheme.typography.caption,
+                                                    color = MaterialTheme.colors.error
+                                                )
+                                            }
+                                        }
+                                    },
+                                    trailing = {
+                                        IconButton(
+                                            onClick = { play(it, album.cover) },
+                                            enabled = it.progress >= 20
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.PlayArrow,
+                                                contentDescription = null
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                            if (downloadingTracks == null || downloadingTracks.isEmpty()) {
+                                Column(
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    CircularProgressIndicator()
+                                }
                             }
                         }
                     }
                 }
-            }
-            if (state == 1) {
-                val current = torrentStatus
-                if (current != null) {
-                    TorrentStatusScreen(current)
-                } else {
-                    Text("Could not find torrent.")
+                1 -> {
+                    val current = torrentStatus
+                    if (current != null) {
+                        TorrentStatusScreen(current)
+                    } else {
+                        Text("Could not find torrent.")
+                    }
                 }
             }
         }

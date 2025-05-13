@@ -32,6 +32,7 @@ import nl.tudelft.trustchain.musicdao.ui.screens.wallet.BitcoinWalletScreen
 import nl.tudelft.trustchain.musicdao.ui.screens.wallet.BitcoinWalletViewModel
 import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
+import nl.tudelft.trustchain.musicdao.core.services.AccountService
 import nl.tudelft.trustchain.musicdao.ui.screens.dao.*
 import nl.tudelft.trustchain.musicdao.ui.screens.debug.DebugScreenViewModel
 import nl.tudelft.trustchain.musicdao.ui.screens.profile.EditProfileScreen
@@ -51,6 +52,7 @@ fun AppNavigation(
 ) {
     val bitcoinWalletViewModel: BitcoinWalletViewModel = hiltViewModel()
     val daoViewModel: DaoViewModel = hiltViewModel()
+    val accountService : AccountService = AccountService()
 
     daoViewModel.initManager()
 
@@ -78,7 +80,7 @@ fun AppNavigation(
                 Debug(debugScreenViewModel)
             }
             composable(Screen.MyProfile.route) {
-                MyProfileScreen(navController = navController, ownProfileViewScreenModel)
+                MyProfileScreen(navController = navController, profileScreenViewModel = ownProfileViewScreenModel)
             }
             composable(Screen.EditProfile.route) {
                 EditProfileScreen(navController = navController)
@@ -188,7 +190,9 @@ fun AppNavigation(
                     navBackStackEntry.arguments?.getString(
                         "publicKey"
                     )!!,
-                    navController = navController
+                    navController = navController,
+                    accountService = accountService,
+                    onNavigateToUpgrade = { /* Navigate to upgrade screen */ }
                 )
             }
             composable(

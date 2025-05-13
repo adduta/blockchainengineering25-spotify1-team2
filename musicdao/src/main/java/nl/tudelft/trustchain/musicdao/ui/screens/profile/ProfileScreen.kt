@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import nl.tudelft.trustchain.musicdao.MusicActivity
 import nl.tudelft.trustchain.musicdao.ui.components.EmptyState
+import nl.tudelft.trustchain.musicdao.core.services.AccountService
 import dagger.hilt.android.EntryPointAccessors
 
 @ExperimentalMaterialApi
@@ -21,7 +22,9 @@ import dagger.hilt.android.EntryPointAccessors
 @Composable
 fun ProfileScreen(
     publicKey: String,
-    navController: NavController
+    navController: NavController,
+    accountService: AccountService,
+    onNavigateToUpgrade: () -> Unit
 ) {
     val viewModelFactory =
         EntryPointAccessors.fromActivity(
@@ -36,11 +39,19 @@ fun ProfileScreen(
 
     val profile = viewModel.profile.collectAsState()
     val releases = viewModel.releases.collectAsState()
+    val isOwnProfile = viewModel.isOwnProfile.collectAsState()
 
     profile.value?.let {
-        Profile(artist = it, releases = releases.value, navController = navController)
+        Profile(
+            artist = it,
+            releases = releases.value,
+            accountService = accountService,
+            onNavigateToUpgrade = onNavigateToUpgrade,
+            navController = navController,
+            isOwnProfile = isOwnProfile.value
+        )
     } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        EmptyState(firstLine = "404", secondLine = "This artist has not published  any information yet.")
+        EmptyState(firstLine = "404", secondLine = "This artist has not published any information yet.")
         return
     }
 }

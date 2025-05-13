@@ -4,6 +4,8 @@ import androidx.lifecycle.*
 import nl.tudelft.trustchain.musicdao.core.cache.CacheDatabase
 import nl.tudelft.trustchain.musicdao.core.cache.entities.AlbumEntity
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
+import nl.tudelft.trustchain.musicdao.core.repositories.model.Artist
+import nl.tudelft.trustchain.musicdao.core.services.DownloadDelayService
 import nl.tudelft.trustchain.musicdao.core.torrent.TorrentEngine
 import nl.tudelft.trustchain.musicdao.core.torrent.status.TorrentStatus
 import dagger.assisted.Assisted
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @OptIn(DelicateCoroutinesApi::class)
 class ReleaseScreenViewModel
@@ -23,6 +26,7 @@ class ReleaseScreenViewModel
         @Assisted private val releaseId: String,
         private val database: CacheDatabase,
         private val torrentEngine: TorrentEngine,
+        private val downloadDelayService: DownloadDelayService,
     ) : ViewModel() {
         @AssistedFactory
         interface ReleaseScreenViewModelFactory {
@@ -48,15 +52,24 @@ class ReleaseScreenViewModel
         private val _torrentState: MutableStateFlow<TorrentStatus?> = MutableStateFlow(null)
         val torrentState: StateFlow<TorrentStatus?> = _torrentState
 
+        private val _canDownload: MutableStateFlow<Boolean> = MutableStateFlow(true)
+        val canDownload: StateFlow<Boolean> = _canDownload
+
+        private val _remainingDelay: MutableStateFlow<Long> = MutableStateFlow(0)
+        val remainingDelay: StateFlow<Long> = _remainingDelay
+
         init {
             viewModelScope.launch {
                 releaseLiveData = database.dao.getLiveData(releaseId)
                 saturatedReleaseState = releaseLiveData.map { it.toAlbum() }
 
                 val release = database.dao.get(releaseId)
-
                 release.let { _release ->
-                    if (!_release.isDownloaded) {
+                    val album = _release.toAlbum()
+                    _canDownload.value = downloadDelayService.canDownloadNow(album)
+                    _remainingDelay.value = downloadDelayService.getRemainingDelay(album)
+
+                    if (!_release.isDownloaded && _canDownload.value) {
                         torrentEngine.download(_release.magnet)
                     }
 
