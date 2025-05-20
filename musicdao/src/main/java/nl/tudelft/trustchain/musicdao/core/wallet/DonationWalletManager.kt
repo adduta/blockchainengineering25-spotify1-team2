@@ -100,4 +100,15 @@ class DonationWalletManager
         fun getDonationAddress(): String {
             return walletKit.wallet().currentReceiveAddress().toString()
         }
+
+        // Stop method to clean up resources
+        fun stop() {
+            if (::walletKit.isInitialized) {
+                walletKit.stopAsync() // Stop the wallet kit
+                walletKit.awaitTerminated() // Wait for it to terminate
+                Log.d("DonationWallet", "DonationWallet stopped successfully.")
+            } else {
+                Log.w("DonationWallet", "Attempted to stop DonationWallet, but it was not initialized.")
+            }
+        }
     }
