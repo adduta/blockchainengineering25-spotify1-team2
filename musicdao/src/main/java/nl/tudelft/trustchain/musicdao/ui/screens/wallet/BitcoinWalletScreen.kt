@@ -32,6 +32,7 @@ fun BitcoinWalletScreen(bitcoinWalletViewModel: BitcoinWalletViewModel) {
     val walletTransactions = bitcoinWalletViewModel.walletTransactions.collectAsState()
     val isStarted = bitcoinWalletViewModel.isStarted.collectAsState()
     val donationAddress by bitcoinWalletViewModel.donationAddress.collectAsState()
+    val donationBalance = bitcoinWalletViewModel.donationBalance.collectAsState()
     var state by remember { mutableStateOf(0) }
     val titles = listOf("ACTIONS", "TRANSACTIONS")
 
@@ -135,9 +136,9 @@ fun BitcoinWalletScreen(bitcoinWalletViewModel: BitcoinWalletViewModel) {
                     CustomMenuItem(
                         text = "Donate to all artists",
                         onClick = {
-                            // bitcoinWalletViewModel.donateToGlobalWallet("0.1")
+                            bitcoinWalletViewModel.donateToGlobalWallet("0.1")
                         },
-                        enabled = true
+                        enabled = donationAddress != ""
                     )
                     Column(modifier = Modifier.padding(bottom = 20.dp)) {
                         Text(text = "Public Key", fontWeight = FontWeight.Bold)
@@ -166,6 +167,25 @@ fun BitcoinWalletScreen(bitcoinWalletViewModel: BitcoinWalletViewModel) {
                             }
                         }
                     }
+                    Column(modifier = Modifier.padding(bottom = 20.dp)) {
+                        Text(text = "Donation Wallet Balance", fontWeight = FontWeight.Bold)
+                        when {
+                            donationBalance.value != null -> {
+                                Text(
+                                    text = donationBalance.value?.toFriendlyString() ?: "0.00 BTC",
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+                            else -> {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Initializing...")
+                                }
+                            }
+                        }
+                    }
+
 
                     // Column(modifier = Modifier.padding(bottom = 20.dp)) {
                     //     Text(text = "Donation Wallet Balance", fontWeight = FontWeight.Bold)
