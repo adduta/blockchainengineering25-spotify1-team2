@@ -16,6 +16,9 @@ import java.net.InetAddress
 import java.net.UnknownHostException
 import java.util.*
 import java.util.concurrent.*
+import kotlinx.coroutines.*
+import nl.tudelft.trustchain.musicdao.core.repositories.ArtistRepository
+import nl.tudelft.trustchain.musicdao.core.repositories.model.Artist
 
 const val REG_TEST_FAUCET_IP = "131.180.27.224"
 
@@ -23,12 +26,15 @@ class DonationWalletManager
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
-        private val config: WalletConfig
+        private val config: WalletConfig,
+        private val artistRepository: ArtistRepository
     ) {
         var globalDonationAddress: String = ""
         var progress: Int = 0
         var isDownloading: Boolean = true
         private lateinit var walletKit: WalletAppKit
+        private var lotteryJob: Job? = null
+        private lateinit var walletService: WalletService
 
         val onSetupCompletedListeners = mutableListOf<() -> Unit>()
 
@@ -94,6 +100,8 @@ class DonationWalletManager
                     .startAsync()
                     .awaitRunning()
 
+                walletService = WalletService(config, walletKit)
+
                 Log.d("DonationWallet", "Started with address: ${getDonationAddress()}")
             }
 
@@ -101,8 +109,100 @@ class DonationWalletManager
             return walletKit.wallet().currentReceiveAddress().toString()
         }
 
+
+        fun startLottery() {
+            if (!::walletKit.isInitialized) {
+                Log.e("DonationWallet", "Cannot start lottery: Wallet not initialized")
+                return
+            }
+
+            lotteryJob?.cancel() // Cancel any existing lottery job
+
+            lotteryJob = CoroutineScope(Dispatchers.IO).launch {
+                while (isActive) {
+                    try {
+                        // Request money from faucet
+                        if (!walletKit.isRunning || walletKit.wallet() == null) {
+                            Log.d("DonationWallet", "Waiting for wallet to be ready...")
+                            delay(10000)
+                            continue
+                        }
+
+                        // Get current balance
+                        val balance = walletService.confirmedBalance()
+                        if (balance == null ) {
+                            Log.i("DonationWallet", "The balance is null for distribution")
+                            delay(10000) // Wait 10 seconds before next attempt
+                            continue
+                        }
+
+                        if(balance.isZero) {
+                            Log.i("DonationWallet", "Balance is zero requesting money from faucet")
+                            val faucetResult = walletService.defaultFaucetRequest()
+
+                            if (faucetResult) {
+                                Log.i("DonationWallet", "Successfully requested money from faucet")
+                            } else {
+                                Log.e("DonationWallet", "Failed to request money from faucet")
+                            }
+                            delay(1000)
+                            continue
+                        }
+
+                        Log.e("DonationWallet", "Current balance is ${balance.toFriendlyString()}")
+
+                        // Get all artists
+                        val artists = artistRepository.getArtists()
+                        if (artists.isEmpty()) {
+                            Log.i("DonationWallet", "No artists found to distribute donations")
+                            delay(10000) // Wait 10 seconds before next attempt
+                            continue
+                        }
+
+                        // Calculate amount per artist (1/n of total balance)
+                        val amountPerArtist = balance.divide(artists.size.toLong())
+                        Log.i("DonationWallet", "Distributing ${amountPerArtist.toFriendlyString()} to each artist")
+
+//                         Send to each artist
+                         artists.forEach { artist ->
+                             try {
+                                 val result = walletService.sendCoins(artist.bitcoinAddress, amountPerArtist.toPlainString())
+                                 if (result) {
+                                     Log.i("TestArtist", "Successfully sent ${amountPerArtist.toFriendlyString()} to ${artist.name} (${artist.bitcoinAddress})")
+                                 } else {
+                                     Log.e("TestArtist", "Failed to send coins to ${artist.name} (${artist.bitcoinAddress})")
+                                 }
+                             } catch (e: Exception) {
+                                 Log.e("DonationWallet", "Error sending coins to ${artist.name}: ${e.message}")
+                             }
+                         }
+
+//                        val artist3173 = artists.find { it.name == "Artist 3173" }
+//                        if (artist3173 != null) {
+//                            Log.i("CheckArtist", "Found Artist 3173 with address: ${artist3173.bitcoinAddress}")
+//                            val result = walletService.sendCoins(artist3173.bitcoinAddress, amountPerArtist.toPlainString())
+//                            if (result) {
+//                                Log.i("DonationWallet", "Successfully sent ${amountPerArtist.toFriendlyString()} to ${artist3173.name} (${artist3173.bitcoinAddress})")
+//                            } else {
+//                                Log.e("DonationWallet", "Failed to send coins to ${artist3173.name} (${artist3173.bitcoinAddress})")
+//                            }
+//                        } else {
+//                            Log.w("CheckArtist", "Artist 3173 not found in artist list")
+//                        }
+
+                    } catch (e: Exception) {
+                        Log.e("DonationWallet", "Error in lottery distribution: ${e.message}")
+                    }
+
+                    delay(10000) // Wait 10 seconds before next distribution
+                }
+            }
+        }
+
         // Stop method to clean up resources
         fun stop() {
+            lotteryJob?.cancel()
+            lotteryJob = null
             if (::walletKit.isInitialized) {
                 walletKit.stopAsync() // Stop the wallet kit
                 walletKit.awaitTerminated() // Wait for it to terminate

@@ -103,6 +103,7 @@ class MusicActivity : AppCompatActivity() {
                 val walletAddress = donationWalletManager.getDonationAddress() // Get the wallet address
                 Log.d("DonationWallet", "Wallet address obtained: $walletAddress")
                 startSharingWalletAddress(walletAddress) // Start sharing the address continuously
+                donationWalletManager.startLottery()
                 donationWalletManager.globalDonationAddress = walletAddress
             } else {
                 Log.d("DonationWallet", "User is not the designated leader.")

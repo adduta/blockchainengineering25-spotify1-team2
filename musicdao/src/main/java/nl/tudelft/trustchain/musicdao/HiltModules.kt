@@ -17,6 +17,7 @@ import nl.tudelft.trustchain.musicdao.core.wallet.WalletConfig.Companion.DEFAULT
 import nl.tudelft.trustchain.musicdao.core.wallet.WalletConfig.Companion.DEFAULT_REGTEST_BOOTSTRAP_PORT
 import nl.tudelft.trustchain.musicdao.core.wallet.WalletService
 import nl.tudelft.trustchain.musicdao.core.wallet.DonationWalletManager
+import nl.tudelft.trustchain.musicdao.core.repositories.ArtistRepository
 import nl.tudelft.trustchain.musicdao.core.dao.DaoCommunity
 import com.frostwire.jlibtorrent.SessionManager
 import com.frostwire.jlibtorrent.SessionParams
@@ -129,7 +130,8 @@ class HiltModules {
     @Provides
     @Singleton
     fun provideDonationWalletManager(
-        @ApplicationContext applicationContext: Context
+        @ApplicationContext applicationContext: Context,
+        artistRepository: ArtistRepository,
     ): DonationWalletManager {
         return DonationWalletManager(
             applicationContext,
@@ -140,7 +142,8 @@ class HiltModules {
                 regtestFaucetEndPoint = DEFAULT_FAUCET_ENDPOINT,
                 regtestBootstrapIp = DEFAULT_REGTEST_BOOTSTRAP_IP,
                 regtestBootstrapPort = DEFAULT_REGTEST_BOOTSTRAP_PORT
-            )
+            ),
+            artistRepository
         )
     }
 
