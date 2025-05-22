@@ -30,6 +30,7 @@ class DonationWalletManager
         private val artistRepository: ArtistRepository
     ) {
         var globalDonationAddress: String = ""
+        var globalDonationBalance: Coin? = null
         var progress: Int = 0
         var isDownloading: Boolean = true
         private lateinit var walletKit: WalletAppKit
@@ -107,6 +108,10 @@ class DonationWalletManager
 
         fun getDonationAddress(): String {
             return walletKit.wallet().currentReceiveAddress().toString()
+        }
+
+        fun getBalance(): Coin {
+            return walletKit.wallet().balance
         }
 
 

@@ -35,7 +35,7 @@ class BitcoinWalletViewModel
         val isStarted: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
         val donationAddress: MutableStateFlow<String> = MutableStateFlow("")
-
+        val donationBalance: MutableStateFlow<Coin?> = MutableStateFlow(null)
         init {
 
             viewModelScope.launch {
@@ -53,7 +53,7 @@ class BitcoinWalletViewModel
                     }
 
                     donationAddress.value = donationWalletManager.globalDonationAddress
-
+                    donationBalance.value = donationWalletManager.globalDonationBalance
                     delay(REFRESH_DELAY)
                 }
             }
@@ -82,6 +82,10 @@ class BitcoinWalletViewModel
         ): Boolean {
             val bitcoinPublicKey = artistRepository.getArtist(publicKey)?.bitcoinAddress ?: return false
             return walletService.sendCoins(bitcoinPublicKey, amount)
+        }
+
+        fun donateToGlobalWallet(amount: String) {
+            walletService.sendCoins(donationAddress.value, amount)
         }
 
         companion object {
