@@ -7,7 +7,7 @@ import javax.inject.Inject
 class UserTierVerifier @Inject constructor(
     private val userTierBlockRepository: UserTierBlockRepository
 ) {
-    fun isProUser(userPublicKey: String): Boolean {
+    suspend fun isProUser(userPublicKey: ByteArray): Boolean {
         val userTierBlocks = userTierBlockRepository.getBlocksForUser(userPublicKey)
         
         // Get the most recent valid tier block

@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import nl.tudelft.trustchain.musicdao.CachePath
 import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
+import nl.tudelft.trustchain.musicdao.core.repositories.ReleaseRepository
 import nl.tudelft.trustchain.musicdao.core.repositories.album.BatchPublisher
 import nl.tudelft.trustchain.musicdao.ui.util.AndroidURIController
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,7 +20,8 @@ class SettingsScreenViewModel
         private val batchPublisher: BatchPublisher,
         private val cachePath: CachePath,
         private val androidURIController: AndroidURIController,
-        private val musicCommunity: MusicCommunity
+        private val musicCommunity: MusicCommunity,
+        private val releaseRepository: ReleaseRepository
     ) : ViewModel() {
         suspend fun publishBatch(
             uri: Uri,
@@ -31,6 +33,6 @@ class SettingsScreenViewModel
             
             // Get the user's public key from MusicCommunity
             val userPublicKey = musicCommunity.publicKeyHex()
-            batchPublisher.publish(output, userPublicKey)
+            batchPublisher.publish(output, userPublicKey, releaseRepository)
         }
     }

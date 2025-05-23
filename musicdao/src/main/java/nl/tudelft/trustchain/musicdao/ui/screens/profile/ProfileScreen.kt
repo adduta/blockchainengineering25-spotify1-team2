@@ -10,12 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Button
-import androidx.compose.material.Card
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
@@ -71,6 +66,8 @@ fun ProfileScreen(
     onUpgradeClick: () -> Unit
 ) {
     var showUpgradeDialog by remember { mutableStateOf(false) }
+    val accountType by viewModel.accountType.collectAsState()
+    val validUntil by viewModel.validUntil.collectAsState()
 
     Column(
         modifier = Modifier
@@ -100,12 +97,12 @@ fun ProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TierStatusBadge(
-                        tier = viewModel.accountType,
+                        tier = accountType,
                         modifier = Modifier.padding(end = 8.dp)
                     )
 
                     Text(
-                        text = when (viewModel.accountType) {
+                        text = when (accountType) {
                             AccountType.PRO -> "Pro Account"
                             AccountType.BASIC -> "Basic Account"
                         },
@@ -113,10 +110,10 @@ fun ProfileScreen(
                     )
                 }
 
-                if (viewModel.accountType == AccountType.PRO && viewModel.validUntil != null) {
+                if (accountType == AccountType.PRO && validUntil != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Valid until: ${DateTimeFormatter.ISO_LOCAL_DATE.format(viewModel.validUntil)}",
+                        text = "Valid until: ${DateTimeFormatter.ISO_LOCAL_DATE.format(validUntil)}",
                         fontSize = 14.sp,
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
                     )
@@ -124,7 +121,7 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (viewModel.accountType == AccountType.BASIC) {
+                if (accountType == AccountType.BASIC) {
                     Button(
                         onClick = { showUpgradeDialog = true },
                         modifier = Modifier.fillMaxWidth()
@@ -215,4 +212,34 @@ private fun ProBenefitItem(
             )
         }
     }
+}
+
+@Composable
+private fun UpgradeDialog(
+    onDismiss: () -> Unit,
+    onUpgrade: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Upgrade to Pro") },
+        text = {
+            Column {
+                Text("Upgrade your account to Pro to get:")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("• Instant access to new releases")
+                Text("• No waiting period")
+                Text("• Direct artist support")
+            }
+        },
+        confirmButton = {
+            Button(onClick = onUpgrade) {
+                Text("Upgrade Now")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

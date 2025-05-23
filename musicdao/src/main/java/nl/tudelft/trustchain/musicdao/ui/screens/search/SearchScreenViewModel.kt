@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.core.repositories.AlbumRepository
+import nl.tudelft.trustchain.musicdao.core.repositories.ReleaseRepository
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -20,6 +21,7 @@ class SearchScreenViewModel
     @Inject
     constructor(
         private val albumRepository: AlbumRepository,
+        private val releaseRepository: ReleaseRepository,
         private val musicCommunity: MusicCommunity
     ) : ViewModel() {
         private val _isRefreshing: MutableLiveData<Boolean> = MutableLiveData()
@@ -42,9 +44,9 @@ class SearchScreenViewModel
         init {
             viewModelScope.launch {
                 val userPublicKey = musicCommunity.publicKeyHex()
-                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey))
+                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
                 _peerAmount.value = musicCommunity.getPeers().size
-                _totalReleaseAmount.value = albumRepository.getAlbums(userPublicKey).size
+                _totalReleaseAmount.value = albumRepository.getAlbums(userPublicKey, releaseRepository).size
             }
         }
 
@@ -71,7 +73,7 @@ class SearchScreenViewModel
         private suspend fun search(searchText: String) {
             val userPublicKey = musicCommunity.publicKeyHex()
             if (searchText.isEmpty()) {
-                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey))
+                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
             } else {
                 val result = albumRepository.searchAlbums(searchText)
                 _searchResult.value = downloadedFirstInListOfAlbums(result)
@@ -84,10 +86,10 @@ class SearchScreenViewModel
                 delay(500)
                 val userPublicKey = musicCommunity.publicKeyHex()
                 if (_searchQuery.value.isEmpty()) {
-                    _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey))
+                    _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
                 }
                 _peerAmount.value = musicCommunity.getPeers().size
-                _totalReleaseAmount.value = albumRepository.getAlbums(userPublicKey).size
+                _totalReleaseAmount.value = albumRepository.getAlbums(userPublicKey, releaseRepository).size
                 _isRefreshing.value = false
             }
         }

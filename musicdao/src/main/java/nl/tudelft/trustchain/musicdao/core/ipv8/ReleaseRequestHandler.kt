@@ -3,6 +3,7 @@ package nl.tudelft.trustchain.musicdao.core.ipv8
 import nl.tudelft.trustchain.musicdao.core.ipv8.messages.ReleaseRequestMessage
 import nl.tudelft.trustchain.musicdao.core.ipv8.messages.ReleaseResponseMessage
 import nl.tudelft.trustchain.musicdao.core.repositories.AlbumRepository
+import nl.tudelft.ipv8.util.hexToBytes
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -22,7 +23,8 @@ class ReleaseRequestHandler @Inject constructor(
         )
 
         val releaseDate = release.releaseDate
-        val isProUser = userTierVerifier.isProUser(request.userPublicKey)
+        val userPublicKeyBytes = request.userPublicKey.hexToBytes()
+        val isProUser = userTierVerifier.isProUser(userPublicKeyBytes)
         val isAccessible = isProUser || isReleaseAccessible(releaseDate)
 
         return ReleaseResponseMessage(

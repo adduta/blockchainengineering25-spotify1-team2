@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import nl.tudelft.trustchain.musicdao.core.model.AccountType
 import nl.tudelft.trustchain.musicdao.core.services.UserTierService
+import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier.UserTierBlockRepository
+import nl.tudelft.trustchain.musicdao.core.ipv8.UserTierVerifier
+import nl.tudelft.ipv8.util.hexToBytes
 import java.time.Instant
 import javax.inject.Inject
 
@@ -22,7 +25,9 @@ class ProfileScreenViewModel
     constructor(
         @Assisted private val publicKey: String,
         private val artistRepository: ArtistRepository,
-        private val userTierService: UserTierService
+        private val userTierService: UserTierService,
+        private val userTierBlockRepository: UserTierBlockRepository,
+        private val userTierVerifier: UserTierVerifier
     ) : ViewModel() {
         private val _profile: MutableStateFlow<Artist?> = MutableStateFlow(null)
         var profile: StateFlow<Artist?> = _profile
@@ -46,17 +51,30 @@ class ProfileScreenViewModel
 
         private fun loadTierStatus() {
             viewModelScope.launch {
-                // TODO: Implement loading tier status from TrustChain
-                // For now, default to BASIC
-                _accountType.value = AccountType.BASIC
-                _validUntil.value = null
+                val publicKeyBytes = publicKey.hexToBytes()
+                val isPro = userTierVerifier.isProUser(publicKeyBytes)
+                
+                if (isPro) {
+                    _accountType.value = AccountType.PRO
+                    // Get the most recent valid tier block to determine validity period
+                    val userTierBlocks = userTierBlockRepository.getBlocksForUser(publicKeyBytes)
+                    val currentTime = System.currentTimeMillis()
+                    val validTierBlock = userTierBlocks
+                        .filter { it.validFrom <= currentTime && (it.validUntil == null || it.validUntil > currentTime) }
+                        .maxByOrNull { it.validFrom }
+                    
+                    _validUntil.value = validTierBlock?.validUntil?.let { Instant.ofEpochMilli(it) }
+                } else {
+                    _accountType.value = AccountType.BASIC
+                    _validUntil.value = null
+                }
             }
         }
 
         fun upgradeToPro(months: Int = 1) {
             viewModelScope.launch {
                 val success = userTierService.upgradeToPro(
-                    userId = "TODO: Get user ID", // TODO: Get actual user ID
+                    userId = publicKey,
                     durationMonths = months
                 )
                 

@@ -4,6 +4,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import nl.tudelft.trustchain.musicdao.core.cache.CacheDatabase
 import nl.tudelft.trustchain.musicdao.core.cache.entities.AlbumEntity
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.releasePublish.ReleasePublishBlock
@@ -20,28 +22,29 @@ class AlbumRepository
     @Inject
     constructor(
         private val database: CacheDatabase,
-        private val releasePublishBlockRepository: ReleasePublishBlockRepository,
-        private val releaseRepository: ReleaseRepository
+        private val releasePublishBlockRepository: ReleasePublishBlockRepository
     ) {
         suspend fun getReleaseById(releaseId: String): Album? {
             return database.dao.get(releaseId)?.toAlbum()
         }
 
-        suspend fun getAlbums(userPublicKey: String): List<Album> {
-            return database.dao.getAll().map { entity ->
-                val magnetLink = releaseRepository.getFullRelease(entity.id, userPublicKey)
-                entity.toAlbum().copy(
-                    magnet = magnetLink ?: "access_restricted"
-                )
+        suspend fun getAlbums(userPublicKey: String, releaseRepository: ReleaseRepository): List<Album> {
+            return withContext(Dispatchers.IO) {
+                database.dao.getAll().map { entity ->
+                    val magnetLink = releaseRepository.getFullRelease(entity.id, userPublicKey)
+                    entity.toAlbum().copy(
+                        magnet = magnetLink ?: "access_restricted"
+                    )
+                }
             }
         }
 
         fun getAlbumsFlow(userPublicKey: String): LiveData<List<Album>> {
             return database.dao.getAllLiveData().map { entities ->
                 entities.map { entity ->
-                    val magnetLink = releaseRepository.getFullRelease(entity.id, userPublicKey)
+                    // Note: This is called from a non-suspend context, so we can't use getFullRelease here
                     entity.toAlbum().copy(
-                        magnet = magnetLink ?: "access_restricted"
+                        magnet = "access_restricted"
                     )
                 }
             }

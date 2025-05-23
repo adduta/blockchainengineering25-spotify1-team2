@@ -7,9 +7,9 @@ import javax.inject.Inject
 class UserTierBlockRepository @Inject constructor(
     private val musicCommunity: MusicCommunity
 ) {
-    fun getBlocksForUser(userPublicKey: String): List<UserTierBlock> {
+    fun getBlocksForUser(userPublicKey: ByteArray): List<UserTierBlock> {
         return musicCommunity.database.getBlocksWithType(UserTierBlock.BLOCK_TYPE)
-            .filter { it.publicKey == userPublicKey }
+            .filter { it.publicKey.contentEquals(userPublicKey) }
             .map { toBlock(it) }
     }
 
@@ -27,11 +27,16 @@ class UserTierBlockRepository @Inject constructor(
             "validUntil" to validUntil
         )
 
-        return musicCommunity.createProposalBlock(transaction)
+        return musicCommunity.createProposalBlock(
+            blockType = UserTierBlock.BLOCK_TYPE,
+            transaction = transaction,
+            publicKey = musicCommunity.myPeer.publicKey.keyToBin()
+        )
     }
 
     fun toBlock(block: TrustChainBlock): UserTierBlock {
-        val transaction = block.transaction
+        @Suppress("UNCHECKED_CAST")
+        val transaction = block.transaction as Map<String, Any>
         return UserTierBlock(
             userId = transaction["userId"] as String,
             tier = transaction["tier"] as String,
