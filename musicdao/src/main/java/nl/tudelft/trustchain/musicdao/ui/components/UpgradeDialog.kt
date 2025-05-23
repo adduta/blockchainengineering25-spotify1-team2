@@ -1,6 +1,5 @@
 package nl.tudelft.trustchain.musicdao.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -15,8 +14,6 @@ fun UpgradeDialog(
     onDismiss: () -> Unit,
     onUpgrade: () -> Unit
 ) {
-    var selectedDuration by remember { mutableStateOf(1) }
-
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -37,35 +34,34 @@ fun UpgradeDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Select subscription duration:",
+                    text = "Monthly subscription:",
                     style = MaterialTheme.typography.subtitle1
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Duration options
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                // Single subscription option
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    elevation = 2.dp,
+                    backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.1f)
                 ) {
-                    DurationOption(
-                        months = 1,
-                        price = "€4.99",
-                        selected = selectedDuration == 1,
-                        onClick = { selectedDuration = 1 }
-                    )
-                    DurationOption(
-                        months = 3,
-                        price = "€12.99",
-                        selected = selectedDuration == 3,
-                        onClick = { selectedDuration = 3 }
-                    )
-                    DurationOption(
-                        months = 12,
-                        price = "€39.99",
-                        selected = selectedDuration == 12,
-                        onClick = { selectedDuration = 12 }
-                    )
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Monthly Plan",
+                            style = MaterialTheme.typography.subtitle1,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "0.1 BTC / month",
+                            style = MaterialTheme.typography.body1
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -87,32 +83,5 @@ fun UpgradeDialog(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun DurationOption(
-    months: Int,
-    price: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .padding(8.dp)
-            .clickable(onClick = onClick)
-    ) {
-        Text(
-            text = "$months ${if (months == 1) "Month" else "Months"}",
-            style = MaterialTheme.typography.subtitle1,
-            color = if (selected) MaterialTheme.colors.primary else MaterialTheme.colors.onSurface
-        )
-
-        Text(
-            text = price,
-            style = MaterialTheme.typography.body1,
-            color = if (selected) MaterialTheme.colors.primary else MaterialTheme.colors.onSurface
-        )
     }
 }
