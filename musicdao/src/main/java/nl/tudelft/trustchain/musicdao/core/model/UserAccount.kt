@@ -9,4 +9,4 @@ data class UserAccount(
     val userId: String,
     val accountType: AccountType,
     val createdAt: Long = System.currentTimeMillis()
-) 
+)

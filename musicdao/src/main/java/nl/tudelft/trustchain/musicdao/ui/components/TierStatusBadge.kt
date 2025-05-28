@@ -18,23 +18,25 @@ fun TierStatusBadge(
     modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(
-                when (tier) {
-                    AccountType.PRO -> MaterialTheme.colors.primary
-                    AccountType.BASIC -> MaterialTheme.colors.onSurface.copy(alpha = 0.1f)
-                }
-            )
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(4.dp))
+                .background(
+                    when (tier) {
+                        AccountType.PRO -> MaterialTheme.colors.primary
+                        AccountType.BASIC -> MaterialTheme.colors.onSurface.copy(alpha = 0.1f)
+                    }
+                )
+                .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
             text = tier.name,
-            color = when (tier) {
-                AccountType.PRO -> MaterialTheme.colors.onPrimary
-                AccountType.BASIC -> MaterialTheme.colors.onSurface
-            },
+            color =
+                when (tier) {
+                    AccountType.PRO -> MaterialTheme.colors.onPrimary
+                    AccountType.BASIC -> MaterialTheme.colors.onSurface
+                },
             style = MaterialTheme.typography.caption
         )
     }
-} 
+}

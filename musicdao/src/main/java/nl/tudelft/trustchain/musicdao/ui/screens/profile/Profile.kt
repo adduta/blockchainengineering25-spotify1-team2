@@ -84,9 +84,10 @@ fun Profile(
         Column(modifier = Modifier.padding(20.dp)) {
             // Account Status Section
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
                 elevation = 4.dp
             ) {
                 Column(
@@ -109,21 +110,23 @@ fun Profile(
                         )
 
                         Text(
-                            text = when (accountType) {
-                                AccountType.PRO -> "Pro Account"
-                                AccountType.BASIC -> "Basic Account"
-                            },
+                            text =
+                                when (accountType) {
+                                    AccountType.PRO -> "Pro Account"
+                                    AccountType.BASIC -> "Basic Account"
+                                },
                             fontSize = 16.sp
                         )
                     }
 
                     if (accountType == AccountType.PRO && validUntil != null) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        val formattedDate = validUntil?.let { instant ->
-                            instant.atZone(ZoneId.systemDefault())
-                                .toLocalDate()
-                                .format(DateTimeFormatter.ISO_LOCAL_DATE)
-                        } ?: "Unknown"
+                        val formattedDate =
+                            validUntil?.let { instant ->
+                                instant.atZone(ZoneId.systemDefault())
+                                    .toLocalDate()
+                                    .format(DateTimeFormatter.ISO_LOCAL_DATE)
+                            } ?: "Unknown"
                         Text(
                             text = "Valid until: $formattedDate",
                             fontSize = 14.sp,
@@ -151,9 +154,10 @@ fun Profile(
 
             // Benefits Section
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
                 elevation = 4.dp
             ) {
                 Column(
@@ -236,9 +240,10 @@ private fun ProBenefitItem(
     description: String
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(

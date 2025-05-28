@@ -69,7 +69,7 @@ class ReleasePublishBlockRepository
                 publisher = publisher,
                 releaseDate = releaseDate,
                 protocolVersion = protocolVersion,
-                magnet = magnet  // Add magnet to the block data class
+                magnet = magnet
             )
         }
     }

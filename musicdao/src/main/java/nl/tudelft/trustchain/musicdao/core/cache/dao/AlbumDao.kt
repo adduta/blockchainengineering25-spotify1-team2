@@ -33,4 +33,4 @@ interface AlbumDao {
 
     @Delete
     suspend fun delete(album: AlbumEntity)
-} 
+}

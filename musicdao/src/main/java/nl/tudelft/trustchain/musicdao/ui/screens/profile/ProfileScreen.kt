@@ -70,20 +70,23 @@ fun ProfileScreen(
     val validUntil by viewModel.validUntil.collectAsState()
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp)
     ) {
         // Account Status Section
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
             elevation = 4.dp
         ) {
             Column(
-                modifier = Modifier
-                    .padding(16.dp)
+                modifier =
+                    Modifier
+                        .padding(16.dp)
             ) {
                 Text(
                     text = "Account Status",
@@ -102,10 +105,11 @@ fun ProfileScreen(
                     )
 
                     Text(
-                        text = when (accountType) {
-                            AccountType.PRO -> "Pro Account"
-                            AccountType.BASIC -> "Basic Account"
-                        },
+                        text =
+                            when (accountType) {
+                                AccountType.PRO -> "Pro Account"
+                                AccountType.BASIC -> "Basic Account"
+                            },
                         fontSize = 16.sp
                     )
                 }
@@ -189,9 +193,10 @@ private fun ProBenefitItem(
     description: String
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(

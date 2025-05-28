@@ -18,7 +18,6 @@ import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier.UserTierBlockRep
 import nl.tudelft.trustchain.musicdao.core.ipv8.UserTierVerifier
 import nl.tudelft.ipv8.util.hexToBytes
 import java.time.Instant
-import javax.inject.Inject
 
 class ProfileScreenViewModel
     @AssistedInject
@@ -53,16 +52,17 @@ class ProfileScreenViewModel
             viewModelScope.launch {
                 val publicKeyBytes = publicKey.hexToBytes()
                 val isPro = userTierVerifier.isProUser(publicKeyBytes)
-                
+
                 if (isPro) {
                     _accountType.value = AccountType.PRO
                     // Get the most recent valid tier block to determine validity period
                     val userTierBlocks = userTierBlockRepository.getBlocksForUser(publicKeyBytes)
                     val currentTime = System.currentTimeMillis()
-                    val validTierBlock = userTierBlocks
-                        .filter { it.validFrom <= currentTime && (it.validUntil == null || it.validUntil > currentTime) }
-                        .maxByOrNull { it.validFrom }
-                    
+                    val validTierBlock =
+                        userTierBlocks
+                            .filter { it.validFrom <= currentTime && (it.validUntil == null || it.validUntil > currentTime) }
+                            .maxByOrNull { it.validFrom }
+
                     _validUntil.value = validTierBlock?.validUntil?.let { Instant.ofEpochMilli(it) }
                 } else {
                     _accountType.value = AccountType.BASIC
@@ -73,11 +73,12 @@ class ProfileScreenViewModel
 
         fun upgradeToPro(months: Int = 1) {
             viewModelScope.launch {
-                val success = userTierService.upgradeToPro(
-                    userId = publicKey,
-                    durationMonths = months
-                )
-                
+                val success =
+                    userTierService.upgradeToPro(
+                        userId = publicKey,
+                        durationMonths = months
+                    )
+
                 if (success) {
                     _accountType.value = AccountType.PRO
                     // Calculate validUntil based on months

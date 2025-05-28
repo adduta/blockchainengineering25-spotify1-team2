@@ -8,35 +8,38 @@ class UserTierService
     constructor(
         private val userTierBlockRepository: UserTierBlockRepository
     ) {
-    suspend fun upgradeToPro(
-        userId: String,
-        durationMonths: Int? = null
-    ): Boolean {
-        val currentTime = System.currentTimeMillis()
-        val validUntil = durationMonths?.let {
-            currentTime + (it * 30L * 24L * 60L * 60L * 1000L) // Convert months to milliseconds
+        suspend fun upgradeToPro(
+            userId: String,
+            durationMonths: Int? = null
+        ): Boolean {
+            val currentTime = System.currentTimeMillis()
+            val validUntil =
+                durationMonths?.let {
+                    currentTime + (it * 30L * 24L * 60L * 60L * 1000L) // Convert months to milliseconds
+                }
+
+            val block =
+                userTierBlockRepository.create(
+                    userId = userId,
+                    tier = "PRO",
+                    validFrom = currentTime,
+                    validUntil = validUntil
+                )
+
+            return block != null
         }
 
-        val block = userTierBlockRepository.create(
-            userId = userId,
-            tier = "PRO",
-            validFrom = currentTime,
-            validUntil = validUntil
-        )
+        suspend fun downgradeToBasic(userId: String): Boolean {
+            val currentTime = System.currentTimeMillis()
 
-        return block != null
+            val block =
+                userTierBlockRepository.create(
+                    userId = userId,
+                    tier = "BASIC",
+                    validFrom = currentTime,
+                    validUntil = null
+                )
+
+            return block != null
+        }
     }
-
-    suspend fun downgradeToBasic(userId: String): Boolean {
-        val currentTime = System.currentTimeMillis()
-        
-        val block = userTierBlockRepository.create(
-            userId = userId,
-            tier = "BASIC",
-            validFrom = currentTime,
-            validUntil = null
-        )
-
-        return block != null
-    }
-} 

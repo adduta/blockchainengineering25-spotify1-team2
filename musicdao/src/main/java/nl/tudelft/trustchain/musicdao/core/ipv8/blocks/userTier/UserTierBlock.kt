@@ -2,11 +2,11 @@ package nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier
 
 data class UserTierBlock(
     val userId: String,
-    val tier: String,  // "PRO" or "BASIC"
+    val tier: String,
     val validFrom: Long,
-    val validUntil: Long?  // null for permanent tiers
+    val validUntil: Long?
 ) {
     companion object {
         const val BLOCK_TYPE = "user_tier"
     }
-} 
+}

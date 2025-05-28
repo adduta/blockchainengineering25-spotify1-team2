@@ -7,7 +7,7 @@ data class ReleasePublishBlock(
     val publisher: String,
     val releaseDate: String,
     val protocolVersion: String,
-    val magnet: String? = null  // Optional magnet link for backward compatibility
+    val magnet: String? = null
 ) {
     companion object {
         const val BLOCK_TYPE = "publish_release"

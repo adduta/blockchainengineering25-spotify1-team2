@@ -20,7 +20,11 @@ class BatchPublisher
         val albumRepository: AlbumRepository
     ) {
         @OptIn(DelicateCoroutinesApi::class)
-        suspend fun publish(file: File, userPublicKey: String, releaseRepository: ReleaseRepository) {
+        suspend fun publish(
+            file: File,
+            userPublicKey: String,
+            releaseRepository: ReleaseRepository
+        ) {
             val currentAlbums = albumRepository.getAlbums(userPublicKey, releaseRepository)
 
             if (!file.exists()) {

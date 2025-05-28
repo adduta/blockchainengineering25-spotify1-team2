@@ -30,7 +30,7 @@ class SettingsScreenViewModel
             Log.d("MusicDao", "publishBatch: $uri")
             val path = Paths.get("${cachePath.getPath()}/batch_publish/output.csv")
             val output = androidURIController.copyIntoCache(uri, context, path) ?: return
-            
+
             // Get the user's public key from MusicCommunity
             val userPublicKey = musicCommunity.publicKeyHex()
             batchPublisher.publish(output, userPublicKey, releaseRepository)

@@ -16,14 +16,16 @@ fun UpgradeDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             elevation = 8.dp
         ) {
             Column(
-                modifier = Modifier
-                    .padding(16.dp)
+                modifier =
+                    Modifier
+                        .padding(16.dp)
             ) {
                 Text(
                     text = "Upgrade to Pro",
@@ -42,9 +44,10 @@ fun UpgradeDialog(
 
                 // Single subscription option
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
                     elevation = 2.dp,
                     backgroundColor = MaterialTheme.colors.primary.copy(alpha = 0.1f)
                 ) {
