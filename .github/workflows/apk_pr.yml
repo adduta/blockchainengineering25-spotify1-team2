@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: refs/pull/${{github.event.pull_request.number}}/merge
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
 
       - uses: ./.github/actions/checkout_submodules
 
@@ -25,15 +25,21 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Build release APK
+      - name: Build release APK (with or without signing)
         run: |
-          echo $KEYSTORE_FILE | base64 -d > app/build.keystore
-          ./gradlew assembleRelease \
-            --no-daemon \
-            -Pandroid.injected.signing.store.file=$(pwd)/app/build.keystore \
-            -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
-            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
-            -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+          if [ -n "$KEYSTORE_FILE" ]; then
+            echo "Signing release APK with provided keystore..."
+            echo "$KEYSTORE_FILE" | base64 -d > app/build.keystore
+            ./gradlew assembleRelease \
+              --no-daemon \
+              -Pandroid.injected.signing.store.file=$(pwd)/app/build.keystore \
+              -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+              -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+              -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+          else
+            echo "No keystore found. Building unsigned release APK..."
+            ./gradlew assembleRelease --no-daemon
+          fi
         env:
           KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
