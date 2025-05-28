@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.musicdao.ui.screens.release
 
+import android.util.Log
 import androidx.lifecycle.*
 import nl.tudelft.trustchain.musicdao.core.cache.CacheDatabase
 import nl.tudelft.trustchain.musicdao.core.cache.entities.AlbumEntity
@@ -55,16 +56,27 @@ class ReleaseScreenViewModel
 
                 val release = database.dao.get(releaseId)
 
-                release.let { _release ->
-                    if (!_release.isDownloaded) {
-                        torrentEngine.download(_release.magnet)
-                    }
-
-                    while (isActive) {
-                        if (_release.infoHash != null) {
-                            _torrentState.value = torrentEngine.getTorrentStatus(_release.infoHash)
+                release?.let { _release ->
+                    // Skip download for access-restricted releases
+                    if (_release.magnet != "access_restricted") {
+                        if (!_release.isDownloaded && _release.magnet.isNotEmpty()) {
+                            try {
+                                torrentEngine.download(_release.magnet)
+                            } catch (e: Exception) {
+                                Log.e("ReleaseScreenViewModel", "Error downloading torrent: ${e.message}")
+                            }
                         }
-                        delay(1000L)
+
+                        while (isActive) {
+                            if (_release.infoHash != null) {
+                                try {
+                                    _torrentState.value = torrentEngine.getTorrentStatus(_release.infoHash)
+                                } catch (e: Exception) {
+                                    Log.e("ReleaseScreenViewModel", "Error getting torrent status: ${e.message}")
+                                }
+                            }
+                            delay(1000L)
+                        }
                     }
                 }
             }

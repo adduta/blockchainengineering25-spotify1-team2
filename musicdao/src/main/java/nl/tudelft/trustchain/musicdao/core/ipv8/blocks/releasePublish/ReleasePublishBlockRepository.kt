@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.musicdao.core.ipv8.blocks.releasePublish
 
+import android.util.Log
 import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.Constants
 import nl.tudelft.ipv8.android.IPv8Android
@@ -40,6 +41,7 @@ class ReleasePublishBlockRepository
                 )
 
             if (!releasePublishBlockValidator.validateTransaction(transaction)) {
+                Log.d("ReleasePublishBlockRepository", "Invalid transaction data")
                 return null
             }
 
@@ -57,6 +59,8 @@ class ReleasePublishBlockRepository
             val publisher = block.transaction["publisher"] as String
             val releaseDate = block.transaction["releaseDate"] as String
             val protocolVersion = block.transaction["protocolVersion"] as String
+            // Handle old format blocks that might have a magnet link
+            val magnet = block.transaction["magnet"] as? String
 
             return ReleasePublishBlock(
                 releaseId = releaseId,
@@ -64,7 +68,8 @@ class ReleasePublishBlockRepository
                 artist = artist,
                 publisher = publisher,
                 releaseDate = releaseDate,
-                protocolVersion = protocolVersion
+                protocolVersion = protocolVersion,
+                magnet = magnet  // Add magnet to the block data class
             )
         }
     }
