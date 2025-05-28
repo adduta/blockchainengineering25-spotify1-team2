@@ -55,9 +55,9 @@ android {
     signingConfigs {
         release {
             keyAlias "trustchain"
-            keyPassword "N/A"
+            keyPassword "trustchain"
             storeFile file("build.keystore")
-            storePassword "N/A"
+            storePassword "trustchain"
         }
     }
 
