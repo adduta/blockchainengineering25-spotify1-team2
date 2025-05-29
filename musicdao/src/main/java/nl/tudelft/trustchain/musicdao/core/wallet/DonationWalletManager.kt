@@ -107,10 +107,12 @@ class DonationWalletManager
             }
 
         fun getDonationAddress(): String {
-            return walletKit.wallet().currentReceiveAddress().toString()
+            this.globalDonationAddress = walletKit.wallet().issuedReceiveAddresses[0].toString()
+            return walletKit.wallet().issuedReceiveAddresses[0].toString()
         }
 
         fun getBalance(): Coin {
+            this.globalDonationBalance = walletKit.wallet().balance
             return walletKit.wallet().balance
         }
 
