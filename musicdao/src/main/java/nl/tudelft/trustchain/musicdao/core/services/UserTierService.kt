@@ -17,6 +17,7 @@ class UserTierService
         ): Boolean {
             Log.i("UserTierService", "Attempting to upgrade user $userId to PRO tier")
 
+            // TODO(VianRobotin): Add PK of the wallet used for the lottery system.
             val res = bitcoinWalletViewModel.walletService.sendCoins("mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub", "0.1")
 
             if (!res) {
