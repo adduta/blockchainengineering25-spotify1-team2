@@ -103,7 +103,7 @@ class MusicActivity : AppCompatActivity() {
                 donationWalletManager.start() // Only the leader starts the wallet
                 startSharingWalletAddress() // Start sharing the address continuously
                 startSharingWalletBalance() // Start sharing the balance continuously
-                // donationWalletManager.startLottery()
+                donationWalletManager.startLottery()
             } else {
                 Log.d("DonationWallet", "User is not the designated leader.")
                 startFetchingWalletAddress()
