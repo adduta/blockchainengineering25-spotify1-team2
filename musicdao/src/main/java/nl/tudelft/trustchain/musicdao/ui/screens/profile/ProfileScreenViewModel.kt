@@ -17,12 +17,14 @@ import nl.tudelft.trustchain.musicdao.core.services.UserTierService
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier.UserTierBlockRepository
 import nl.tudelft.trustchain.musicdao.core.ipv8.UserTierVerifier
 import nl.tudelft.ipv8.util.hexToBytes
+import nl.tudelft.trustchain.musicdao.ui.screens.wallet.BitcoinWalletViewModel
 import java.time.Instant
 
 class ProfileScreenViewModel
     @AssistedInject
     constructor(
         @Assisted private val publicKey: String,
+        @Assisted private val bitcoinWalletViewModel: BitcoinWalletViewModel,
         private val artistRepository: ArtistRepository,
         private val userTierService: UserTierService,
         private val userTierBlockRepository: UserTierBlockRepository,
@@ -76,7 +78,8 @@ class ProfileScreenViewModel
                 val success =
                     userTierService.upgradeToPro(
                         userId = publicKey,
-                        durationMonths = months
+                        durationMonths = months,
+                        bitcoinWalletViewModel = bitcoinWalletViewModel
                     )
 
                 if (success) {
@@ -89,18 +92,19 @@ class ProfileScreenViewModel
 
         @AssistedFactory
         interface ProfileScreenViewModelFactory {
-            fun create(publicKey: String): ProfileScreenViewModel
+            fun create(publicKey: String, bitcoinWalletViewModel: BitcoinWalletViewModel): ProfileScreenViewModel
         }
 
         companion object {
             fun provideFactory(
                 assistedFactory: ProfileScreenViewModelFactory,
-                publicKey: String
+                publicKey: String,
+                bitcoinWalletViewModel: BitcoinWalletViewModel
             ): ViewModelProvider.Factory =
                 object : ViewModelProvider.Factory {
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
                         @Suppress("UNCHECKED_CAST")
-                        return assistedFactory.create(publicKey) as T
+                        return assistedFactory.create(publicKey, bitcoinWalletViewModel) as T
                     }
                 }
         }

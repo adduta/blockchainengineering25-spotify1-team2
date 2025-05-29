@@ -32,6 +32,7 @@ import android.app.Activity
 import androidx.compose.ui.platform.LocalContext
 import nl.tudelft.trustchain.musicdao.MusicActivity
 import dagger.hilt.android.EntryPointAccessors
+import nl.tudelft.trustchain.musicdao.ui.screens.wallet.BitcoinWalletViewModel
 
 @ExperimentalFoundationApi
 @ExperimentalMaterialApi
@@ -39,7 +40,8 @@ import dagger.hilt.android.EntryPointAccessors
 fun Profile(
     artist: Artist,
     releases: List<Album> = listOf(),
-    navController: NavController
+    navController: NavController,
+    bitcoinWalletViewModel: BitcoinWalletViewModel
 ) {
     val viewModelFactory =
         EntryPointAccessors.fromActivity(
@@ -49,7 +51,11 @@ fun Profile(
 
     val viewModel: ProfileScreenViewModel =
         viewModel(
-            factory = ProfileScreenViewModel.provideFactory(viewModelFactory, publicKey = artist.publicKey)
+            factory = ProfileScreenViewModel.provideFactory(
+                viewModelFactory,
+                publicKey = artist.publicKey,
+                bitcoinWalletViewModel = bitcoinWalletViewModel
+            )
         )
 
     val accountType by viewModel.accountType.collectAsState()

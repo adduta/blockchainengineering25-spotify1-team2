@@ -78,7 +78,7 @@ fun AppNavigation(
                 Debug(debugScreenViewModel)
             }
             composable(Screen.MyProfile.route) {
-                MyProfileScreen(navController = navController, ownProfileViewScreenModel)
+                MyProfileScreen(navController = navController, ownProfileViewScreenModel, bitcoinWalletViewModel)
             }
             composable(Screen.EditProfile.route) {
                 EditProfileScreen(navController = navController)
@@ -188,7 +188,8 @@ fun AppNavigation(
                     navBackStackEntry.arguments?.getString(
                         "publicKey"
                     )!!,
-                    navController = navController
+                    navController = navController,
+                    bitcoinWalletViewModel = bitcoinWalletViewModel
                 )
             }
             composable(
