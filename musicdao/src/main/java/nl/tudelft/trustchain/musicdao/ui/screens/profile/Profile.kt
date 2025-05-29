@@ -73,7 +73,14 @@ fun Profile(
                 Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .background(Brush.verticalGradient(listOf(Color(0xFF77DF7C), Color(0xFF70C774))))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFF77DF7C),
+                                Color(0xFF70C774)
+                            )
+                        )
+                    )
         ) {
             Text(
                 text = artist.name,
@@ -198,7 +205,13 @@ fun Profile(
                 OutlinedButton(onClick = { }, modifier = Modifier.padding(end = 10.dp)) {
                     Text(text = "Follow")
                 }
-                OutlinedButton(onClick = { navController.navigate(Screen.Donate.createRoute(publicKey = artist.publicKey)) }) {
+                OutlinedButton(onClick = {
+                    navController.navigate(
+                        Screen.Donate.createRoute(
+                            publicKey = artist.publicKey
+                        )
+                    )
+                }) {
                     Text(text = "Donate")
                 }
             }

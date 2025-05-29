@@ -48,16 +48,28 @@ fun ProfileScreen(
 
     val viewModel: ProfileScreenViewModel =
         viewModel(
-            factory = ProfileScreenViewModel.provideFactory(viewModelFactory, publicKey = publicKey, bitcoinWalletViewModel = bitcoinWalletViewModel)
+            factory = ProfileScreenViewModel.provideFactory(
+                viewModelFactory,
+                publicKey = publicKey,
+                bitcoinWalletViewModel = bitcoinWalletViewModel
+            )
         )
 
     val profile = viewModel.profile.collectAsState()
     val releases = viewModel.releases.collectAsState()
 
     profile.value?.let {
-        Profile(artist = it, releases = releases.value, navController = navController, bitcoinWalletViewModel = bitcoinWalletViewModel)
+        Profile(
+            artist = it,
+            releases = releases.value,
+            navController = navController,
+            bitcoinWalletViewModel = bitcoinWalletViewModel
+        )
     } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        EmptyState(firstLine = "404", secondLine = "This artist has not published  any information yet.")
+        EmptyState(
+            firstLine = "404",
+            secondLine = "This artist has not published  any information yet."
+        )
         return
     }
 }
