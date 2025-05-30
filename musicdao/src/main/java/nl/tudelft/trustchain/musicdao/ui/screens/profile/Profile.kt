@@ -248,7 +248,8 @@ fun Profile(
             onUpgrade = {
                 viewModel.upgradeToPro()
                 showUpgradeDialog = false
-            }
+            },
+            currentBalance = bitcoinWalletViewModel.confirmedBalance.value
         )
     }
 }
