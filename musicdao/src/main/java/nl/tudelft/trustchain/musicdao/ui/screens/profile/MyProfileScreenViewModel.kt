@@ -12,9 +12,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class MyProfileScreenViewModel
-@Inject
-constructor(
+class MyProfileScreenViewModel @Inject constructor(
     private val artistRepository: ArtistRepository,
     private val musicCommunity: MusicCommunity,
 ) : ViewModel() {

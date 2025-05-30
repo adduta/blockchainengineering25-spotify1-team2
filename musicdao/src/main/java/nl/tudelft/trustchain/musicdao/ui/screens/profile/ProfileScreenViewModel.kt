@@ -75,12 +75,11 @@ class ProfileScreenViewModel
 
         fun upgradeToPro(months: Int = 1) {
             viewModelScope.launch {
-                val success =
-                    userTierService.upgradeToPro(
-                        userId = publicKey,
-                        durationMonths = months,
-                        bitcoinWalletViewModel = bitcoinWalletViewModel
-                    )
+                val success = userTierService.upgradeToPro(
+                    userId = publicKey,
+                    durationMonths = months,
+                    bitcoinWalletViewModel = bitcoinWalletViewModel
+                )
 
                 if (success) {
                     _accountType.value = AccountType.PRO
