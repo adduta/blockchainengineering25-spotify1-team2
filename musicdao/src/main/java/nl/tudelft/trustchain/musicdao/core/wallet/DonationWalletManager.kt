@@ -146,7 +146,17 @@ class DonationWalletManager
                             continue
                         }
 
-                        Log.e("DonationWalletLottery", "Current balance is ${balance.toFriendlyString()}")
+                        Log.e("DonationWalletLottery", "Current balance is ${balance.toPlainString()}")
+
+                        val peerGroup = walletKit.peerGroup()
+                        val pendingTxs = walletKit.wallet().pendingTransactions
+                        Log.d("DonationWalletLottery", "Number of pending transactions ${pendingTxs.size}")
+                        for (tx in pendingTxs) {
+                            peerGroup.broadcastTransaction(tx)
+                            val confidence = tx.confidence
+                        }
+
+
 
                         // Get all artists
                         val artists = artistRepository.getArtists()
@@ -158,11 +168,10 @@ class DonationWalletManager
 
                         // Calculate amount per artist (1/n of total balance)
                         val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
-                        Log.i("DonationWalletLottery", "Distributing ${amountPerArtist.toFriendlyString()} to each artist")
+                        Log.i("DonationWalletLottery", "Distributing ${amountPerArtist.toPlainString()} to each artist")
 
                         val threshold = Coin.valueOf(5000)
 
-                        Log.i("TestArtist", "TestTag")
 
                         if(amountPerArtist.isLessThan(threshold)) {
                             Log.i("DonationWalletLottery", "The amount per artist is less than 0.00005, not enough balance for distribution")
@@ -170,8 +179,6 @@ class DonationWalletManager
                             continue
                         }
 
-
-                        //Send to each artist
                         val recipients = mutableListOf<Pair<String, String>>()
                         artists.forEach { artist -> recipients.add(Pair(artist.bitcoinAddress, amountPerArtist.toPlainString())) }
                         try {
@@ -185,33 +192,9 @@ class DonationWalletManager
                             Log.e("DonationWalletLottery", "Error sending batch transaction")
                         }
 
-//                       val artist3173 = artists.find { it.name == "Artist 3173" }
-//                       if (artist3173 != null) {
-//                            val recipients = mutableListOf<Pair<String, String>>()
-//                            recipients.add(Pair(artist3173.bitcoinAddress, amountPerArtist.toPlainString()))
-//
-//                           Log.i("TestArtist", "Found Artist 3173")
-//                           val result = walletService.sendBatchTransaction(recipients)
-//                           if (result) {
-//                               Log.i("TestArtist", "Successfully sent ${amountPerArtist.toFriendlyString()} to ${artist3173.name} (${artist3173.bitcoinAddress})")
-//                               Log.i("TestArtist", "Fee: ${walletService.estimateFee(recipients)}")
-//                               delay(1000)
-//                               val balanceTest = walletService.confirmedBalance()
-//                               if (balanceTest == null ) {
-//                                   Log.e("TestArtist", "Should not be possible")
-//                               }
-//                               else{
-//                                   Log.d("TestArtist", "Current balance is ${balanceTest.toFriendlyString()}")
-//                               }
-//                           } else {
-//                               Log.e("TestArtist", "Failed to send coins to ${artist3173.name} (${artist3173.bitcoinAddress})")
-//                           }
-//                       } else {
-//                           Log.w("TestArtist", "Artist 3173 not found in artist list")
-//                       }
 
                     } catch (e: Exception) {
-                        Log.e("DonationWalletLottery", "Error in lottery distribution: ${e.message}")
+                        Log.e("DonationWalletLottery", "Error in lottery distribution: ${e.toString()}")
                     }
 
                     delay(10000) // Wait 10 seconds before next distribution
