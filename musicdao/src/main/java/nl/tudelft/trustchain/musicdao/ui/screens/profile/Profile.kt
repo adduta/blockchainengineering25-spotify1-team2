@@ -243,13 +243,14 @@ fun Profile(
     }
 
     if (showUpgradeDialog) {
+        val currentBalance by bitcoinWalletViewModel.confirmedBalance.collectAsState()
         UpgradeDialog(
             onDismiss = { showUpgradeDialog = false },
             onUpgrade = {
                 viewModel.upgradeToPro()
                 showUpgradeDialog = false
             },
-            currentBalance = bitcoinWalletViewModel.confirmedBalance.value
+            currentBalance = currentBalance
         )
     }
 }
