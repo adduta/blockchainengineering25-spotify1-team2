@@ -179,4 +179,4 @@ class ReleaseRequestHandlerTest {
                 userTierVerifier.isProUser(any())
             }
         }
-} 
+}

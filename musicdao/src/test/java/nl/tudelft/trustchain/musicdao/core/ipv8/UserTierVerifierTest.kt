@@ -156,4 +156,4 @@ class UserTierVerifierTest {
             assertTrue(result)
             coVerify { userTierBlockRepository.getBlocksForUser(userPublicKey) }
         }
-} 
+}

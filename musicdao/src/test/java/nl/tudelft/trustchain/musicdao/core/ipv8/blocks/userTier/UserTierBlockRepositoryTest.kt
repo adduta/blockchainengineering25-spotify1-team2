@@ -201,4 +201,4 @@ class UserTierBlockRepositoryTest {
         assertTrue(blocks.isEmpty())
         verify { musicCommunity.database.getBlocksWithType(UserTierBlock.BLOCK_TYPE) }
     }
-} 
+}

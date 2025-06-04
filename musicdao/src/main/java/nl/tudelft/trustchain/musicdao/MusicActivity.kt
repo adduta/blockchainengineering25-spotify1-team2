@@ -37,7 +37,6 @@ import dagger.hilt.android.components.ActivityComponent
 import kotlinx.coroutines.*
 import nl.tudelft.trustchain.musicdao.core.coin.WalletManager
 import javax.inject.Inject
-import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.attestation.trustchain.ANY_COUNTERPARTY_PK
 
 /**
@@ -84,6 +83,7 @@ class MusicActivity : AppCompatActivity() {
 
     private var walletAddressJob: Job? = null
     private var walletBalanceJob: Job? = null
+
     @DelicateCoroutinesApi
     @ExperimentalAnimationApi
     @ExperimentalFoundationApi
@@ -289,10 +289,11 @@ class MusicActivity : AppCompatActivity() {
         val blocks = musicCommunity.database.getBlocksWithType("DONATION_WALLET_ADDRESS")
         Log.d("DonationWallet", "Retrieved blocks: $blocks")
 
-        val latest = blocks.maxByOrNull { it.timestamp } ?: run {
-            Log.w("DonationWallet", "No blocks found for type 'DONATION_WALLET_ADDRESS'")
-            return ""
-        }
+        val latest =
+            blocks.maxByOrNull { it.timestamp } ?: run {
+                Log.w("DonationWallet", "No blocks found for type 'DONATION_WALLET_ADDRESS'")
+                return ""
+            }
 
         val address = latest.transaction["address"] as? String
         Log.d("DonationWallet", "Latest block address: $address")
@@ -304,39 +305,44 @@ class MusicActivity : AppCompatActivity() {
     }
 
     private fun startFetchingWalletAddress() {
-        walletAddressJob = CoroutineScope(Dispatchers.IO).launch {
-            while (isActive) {
-                val walletAddress = fetchWalletAddressFromSharedLocation()
-                Log.d("DonationWallet", "Fetched wallet address from shared location: $walletAddress")
-                donationWalletManager.globalDonationAddress = walletAddress
+        walletAddressJob =
+            CoroutineScope(Dispatchers.IO).launch {
+                while (isActive) {
+                    val walletAddress = fetchWalletAddressFromSharedLocation()
+                    Log.d("DonationWallet", "Fetched wallet address from shared location: $walletAddress")
+                    donationWalletManager.globalDonationAddress = walletAddress
 
-                // Delay for a specified interval before fetching again
-                delay(1000) // Fetch every 5 seconds (adjust as needed)
+                    // Delay for a specified interval before fetching again
+                    delay(1000) // Fetch every 5 seconds (adjust as needed)
+                }
             }
-        }
     }
 
     private fun startSharingWalletAddress() {
-        walletAddressJob = CoroutineScope(Dispatchers.IO).launch {
-            val walletAddress = donationWalletManager.getDonationAddress()
-            val tx = mapOf(
-                "address" to walletAddress
-            )
-            // Log the transaction map
-            Log.d("DonationWallet", "Transaction map: $tx")
+        walletAddressJob =
+            CoroutineScope(Dispatchers.IO).launch {
+                val walletAddress = donationWalletManager.getDonationAddress()
+                val tx =
+                    mapOf(
+                        "address" to walletAddress
+                    )
+                // Log the transaction map
+                Log.d("DonationWallet", "Transaction map: $tx")
 
-            // Create a proposal block with ANY_COUNTERPARTY_PK to broadcast to all peers
-            val result = musicCommunity.createProposalBlock(
-                "DONATION_WALLET_ADDRESS",
-                tx,
-                ANY_COUNTERPARTY_PK // Use ANY_COUNTERPARTY_PK instead of specific peer
-            )
-            while (isActive) {
-                musicCommunity.sendBlock(result, ttl = 2)
-                Log.d("DonationWallet", "Wallet address shared: $walletAddress")
-                delay(5000) // Adjust the delay as needed (e.g., every 5 seconds)
+                // Create a proposal block with ANY_COUNTERPARTY_PK to broadcast to all peers
+                val result =
+                    musicCommunity.createProposalBlock(
+                        "DONATION_WALLET_ADDRESS",
+                        tx,
+                        // Use ANY_COUNTERPARTY_PK instead of specific peer
+                        ANY_COUNTERPARTY_PK
+                    )
+                while (isActive) {
+                    musicCommunity.sendBlock(result, ttl = 2)
+                    Log.d("DonationWallet", "Wallet address shared: $walletAddress")
+                    delay(5000) // Adjust the delay as needed (e.g., every 5 seconds)
+                }
             }
-        }
     }
 
     // Function to fetch the wallet address from a shared location
@@ -345,10 +351,11 @@ class MusicActivity : AppCompatActivity() {
         val blocks = musicCommunity.database.getBlocksWithType("DONATION_WALLET_BALANCE")
         Log.d("DonationWallet", "Retrieved blocks: $blocks")
 
-        val latest = blocks.maxByOrNull { it.timestamp } ?: run {
-            Log.w("DonationWallet", "No blocks found for type 'DONATION_WALLET_BALANCE'")
-            return Coin.ZERO.toString()
-        }
+        val latest =
+            blocks.maxByOrNull { it.timestamp } ?: run {
+                Log.w("DonationWallet", "No blocks found for type 'DONATION_WALLET_BALANCE'")
+                return Coin.ZERO.toString()
+            }
 
         val balance = latest.transaction["balance"] as? String
         Log.d("DonationWallet", "Latest block balance: $balance")
@@ -360,40 +367,45 @@ class MusicActivity : AppCompatActivity() {
     }
 
     private fun startFetchingWalletBalance() {
-        walletBalanceJob = CoroutineScope(Dispatchers.IO).launch {
-            while (isActive) {
-                val walletBalance = fetchWalletBalanceFromSharedLocation()
-                Log.d("DonationWallet", "Fetched wallet balance from shared location: $walletBalance")
-                donationWalletManager.globalDonationBalance = Coin.valueOf(walletBalance.toLong())
+        walletBalanceJob =
+            CoroutineScope(Dispatchers.IO).launch {
+                while (isActive) {
+                    val walletBalance = fetchWalletBalanceFromSharedLocation()
+                    Log.d("DonationWallet", "Fetched wallet balance from shared location: $walletBalance")
+                    donationWalletManager.globalDonationBalance = Coin.valueOf(walletBalance.toLong())
 
-                // Delay for a specified interval before fetching again
-                delay(1000) // Fetch every 5 seconds (adjust as needed)
+                    // Delay for a specified interval before fetching again
+                    delay(1000) // Fetch every 5 seconds (adjust as needed)
+                }
             }
-        }
     }
 
     private fun startSharingWalletBalance() {
-        walletBalanceJob = CoroutineScope(Dispatchers.IO).launch {
-            while (isActive) {
-                val walletBalance = donationWalletManager.getBalance().toString()
-                val tx = mapOf(
-                    "balance" to walletBalance
-                )
-                // Log the transaction map
-                Log.d("DonationWallet", "Transaction map: $tx")
+        walletBalanceJob =
+            CoroutineScope(Dispatchers.IO).launch {
+                while (isActive) {
+                    val walletBalance = donationWalletManager.getBalance().toString()
+                    val tx =
+                        mapOf(
+                            "balance" to walletBalance
+                        )
+                    // Log the transaction map
+                    Log.d("DonationWallet", "Transaction map: $tx")
 
-                // Create a proposal block with ANY_COUNTERPARTY_PK to broadcast to all peers
-                val result = musicCommunity.createProposalBlock(
-                    "DONATION_WALLET_BALANCE",
-                    tx,
-                    ANY_COUNTERPARTY_PK // Use ANY_COUNTERPARTY_PK instead of specific peer
-                )
+                    // Create a proposal block with ANY_COUNTERPARTY_PK to broadcast to all peers
+                    val result =
+                        musicCommunity.createProposalBlock(
+                            "DONATION_WALLET_BALANCE",
+                            tx,
+                            // Use ANY_COUNTERPARTY_PK instead of specific peer
+                            ANY_COUNTERPARTY_PK
+                        )
 
-                musicCommunity.sendBlock(result, ttl = 2)
-                Log.d("DonationWallet", "Wallet balance shared: $walletBalance")
-                delay(5000) // Adjust the delay as needed (e.g., every 5 seconds)
+                    musicCommunity.sendBlock(result, ttl = 2)
+                    Log.d("DonationWallet", "Wallet balance shared: $walletBalance")
+                    delay(5000) // Adjust the delay as needed (e.g., every 5 seconds)
+                }
             }
-        }
     }
 
     @EntryPoint

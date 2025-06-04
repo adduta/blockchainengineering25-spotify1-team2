@@ -212,4 +212,4 @@ class ReleaseResponseMessageTest {
         assertNotEquals(message1, message2)
         assertNotEquals(message1.hashCode(), message2.hashCode())
     }
-} 
+}

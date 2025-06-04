@@ -150,4 +150,4 @@ class UserTierBlockTest {
         assertNotEquals(block1, block2)
         assertNotEquals(block1.hashCode(), block2.hashCode())
     }
-} 
+}
