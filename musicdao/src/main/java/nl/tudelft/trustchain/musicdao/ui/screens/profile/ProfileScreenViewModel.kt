@@ -75,11 +75,12 @@ class ProfileScreenViewModel
 
         fun upgradeToPro(months: Int = 1) {
             viewModelScope.launch {
-                val success = userTierService.upgradeToPro(
-                    userId = publicKey,
-                    durationMonths = months,
-                    bitcoinWalletViewModel = bitcoinWalletViewModel
-                )
+                val success =
+                    userTierService.upgradeToPro(
+                        userId = publicKey,
+                        durationMonths = months,
+                        bitcoinWalletViewModel = bitcoinWalletViewModel
+                    )
 
                 if (success) {
                     _accountType.value = AccountType.PRO
@@ -91,7 +92,10 @@ class ProfileScreenViewModel
 
         @AssistedFactory
         interface ProfileScreenViewModelFactory {
-            fun create(publicKey: String, bitcoinWalletViewModel: BitcoinWalletViewModel): ProfileScreenViewModel
+            fun create(
+                publicKey: String,
+                bitcoinWalletViewModel: BitcoinWalletViewModel
+            ): ProfileScreenViewModel
         }
 
         companion object {

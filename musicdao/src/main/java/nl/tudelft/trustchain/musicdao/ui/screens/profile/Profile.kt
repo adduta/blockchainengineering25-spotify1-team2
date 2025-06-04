@@ -51,11 +51,12 @@ fun Profile(
 
     val viewModel: ProfileScreenViewModel =
         viewModel(
-            factory = ProfileScreenViewModel.provideFactory(
-                viewModelFactory,
-                publicKey = artist.publicKey,
-                bitcoinWalletViewModel = bitcoinWalletViewModel
-            )
+            factory =
+                ProfileScreenViewModel.provideFactory(
+                    viewModelFactory,
+                    publicKey = artist.publicKey,
+                    bitcoinWalletViewModel = bitcoinWalletViewModel
+                )
         )
 
     val accountType by viewModel.accountType.collectAsState()
