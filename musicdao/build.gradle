@@ -97,6 +97,7 @@ dependencies {
 
     // Cryptocurrency integration
     api 'org.bitcoinj:bitcoinj-core:0.15.10'
+    implementation project(':currencyii')
 
     // Testing
     testImplementation "io.mockk:mockk:$mockk_version"

@@ -1,10 +1,12 @@
 package nl.tudelft.trustchain.musicdao.ui.screens.wallet
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import nl.tudelft.trustchain.musicdao.core.repositories.ArtistRepository
 import nl.tudelft.trustchain.musicdao.core.wallet.UserWalletTransaction
 import nl.tudelft.trustchain.musicdao.core.wallet.WalletService
+import nl.tudelft.trustchain.musicdao.core.wallet.DonationWalletManager
 import nl.tudelft.trustchain.musicdao.ui.SnackbarHandler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -18,7 +20,11 @@ import javax.inject.Inject
 @HiltViewModel
 class BitcoinWalletViewModel
     @Inject
-    constructor(val walletService: WalletService, val artistRepository: ArtistRepository) : ViewModel() {
+    constructor(
+        val walletService: WalletService,
+        val artistRepository: ArtistRepository,
+        val donationWalletManager: DonationWalletManager
+    ) : ViewModel() {
         val publicKey: MutableStateFlow<String?> = MutableStateFlow(null)
         val confirmedBalance: MutableStateFlow<Coin?> = MutableStateFlow(null)
         val estimatedBalance: MutableStateFlow<String?> = MutableStateFlow(null)
@@ -29,6 +35,8 @@ class BitcoinWalletViewModel
         val faucetInProgress: MutableStateFlow<Boolean> = MutableStateFlow(false)
         val isStarted: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
+        val donationAddress: MutableStateFlow<String> = MutableStateFlow("")
+        val donationBalance: MutableStateFlow<Coin?> = MutableStateFlow(null)
         init {
 
             viewModelScope.launch {
@@ -44,6 +52,9 @@ class BitcoinWalletViewModel
                         confirmedBalance.value = walletService.confirmedBalance()
                         walletTransactions.value = walletService.walletTransactions()
                     }
+
+                    donationAddress.value = donationWalletManager.globalDonationAddress
+                    donationBalance.value = donationWalletManager.globalDonationBalance
                     delay(REFRESH_DELAY)
                 }
             }
@@ -72,6 +83,10 @@ class BitcoinWalletViewModel
         ): Boolean {
             val bitcoinPublicKey = artistRepository.getArtist(publicKey)?.bitcoinAddress ?: return false
             return walletService.sendCoins(bitcoinPublicKey, amount)
+        }
+
+        fun donateToGlobalWallet(amount: String) {
+            walletService.sendCoins(donationAddress.value, amount)
         }
 
         companion object {
