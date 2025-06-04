@@ -30,16 +30,18 @@ class UserTierBlockRepositoryTest {
     fun `test getBlocksForUser`() {
         // Arrange
         val userPublicKey = ByteArray(32) { 1 }
-        val trustChainBlock = mockk<TrustChainBlock> {
-            every { publicKey } returns userPublicKey
-            every { transaction } returns mapOf(
-                "type" to UserTierBlock.BLOCK_TYPE,
-                "userId" to "testUser",
-                "tier" to "PRO",
-                "validFrom" to 1000L,
-                "validUntil" to 2000L
-            )
-        }
+        val trustChainBlock =
+            mockk<TrustChainBlock> {
+                every { publicKey } returns userPublicKey
+                every { transaction } returns
+                    mapOf(
+                        "type" to UserTierBlock.BLOCK_TYPE,
+                        "userId" to "testUser",
+                        "tier" to "PRO",
+                        "validFrom" to 1000L,
+                        "validUntil" to 2000L
+                    )
+            }
         every { musicCommunity.database.getBlocksWithType(UserTierBlock.BLOCK_TYPE) } returns listOf(trustChainBlock)
 
         // Act
@@ -63,30 +65,35 @@ class UserTierBlockRepositoryTest {
         val validFrom = 1000L
         val validUntil = 2000L
         val expectedBlock = mockk<TrustChainBlock>()
-        val expectedTransaction = mapOf(
-            "type" to UserTierBlock.BLOCK_TYPE,
-            "userId" to userId,
-            "tier" to tier,
-            "validFrom" to validFrom,
-            "validUntil" to validUntil
-        )
+        val expectedTransaction =
+            mapOf(
+                "type" to UserTierBlock.BLOCK_TYPE,
+                "userId" to userId,
+                "tier" to tier,
+                "validFrom" to validFrom,
+                "validUntil" to validUntil
+            )
         every { musicCommunity.myPeer.publicKey.keyToBin() } returns ByteArray(32) { 1 }
-        coEvery { musicCommunity.createProposalBlock(
-            blockType = UserTierBlock.BLOCK_TYPE,
-            transaction = expectedTransaction,
-            publicKey = any()
-        ) } returns expectedBlock
+        coEvery {
+            musicCommunity.createProposalBlock(
+                blockType = UserTierBlock.BLOCK_TYPE,
+                transaction = expectedTransaction,
+                publicKey = any()
+            )
+        } returns expectedBlock
 
         // Act
         val result = userTierBlockRepository.create(userId, tier, validFrom, validUntil)
 
         // Assert
         assertEquals(expectedBlock, result)
-        coVerify { musicCommunity.createProposalBlock(
-            blockType = UserTierBlock.BLOCK_TYPE,
-            transaction = expectedTransaction,
-            publicKey = any()
-        ) }
+        coVerify {
+            musicCommunity.createProposalBlock(
+                blockType = UserTierBlock.BLOCK_TYPE,
+                transaction = expectedTransaction,
+                publicKey = any()
+            )
+        }
     }
 
     @Test
@@ -97,45 +104,52 @@ class UserTierBlockRepositoryTest {
         val tier = "BASIC"
         val validFrom = 1000L
         val expectedBlock = mockk<TrustChainBlock>()
-        val expectedTransaction = mapOf(
-            "type" to UserTierBlock.BLOCK_TYPE,
-            "userId" to userId,
-            "tier" to tier,
-            "validFrom" to validFrom,
-            "validUntil" to null
-        )
+        val expectedTransaction =
+            mapOf(
+                "type" to UserTierBlock.BLOCK_TYPE,
+                "userId" to userId,
+                "tier" to tier,
+                "validFrom" to validFrom,
+                "validUntil" to null
+            )
         every { musicCommunity.myPeer.publicKey.keyToBin() } returns ByteArray(32) { 1 }
-        coEvery { musicCommunity.createProposalBlock(
-            blockType = UserTierBlock.BLOCK_TYPE,
-            transaction = expectedTransaction,
-            publicKey = any()
-        ) } returns expectedBlock
+        coEvery {
+            musicCommunity.createProposalBlock(
+                blockType = UserTierBlock.BLOCK_TYPE,
+                transaction = expectedTransaction,
+                publicKey = any()
+            )
+        } returns expectedBlock
 
         // Act
         val result = userTierBlockRepository.create(userId, tier, validFrom, null)
 
         // Assert
         assertEquals(expectedBlock, result)
-        coVerify { musicCommunity.createProposalBlock(
-            blockType = UserTierBlock.BLOCK_TYPE,
-            transaction = expectedTransaction,
-            publicKey = any()
-        ) }
+        coVerify {
+            musicCommunity.createProposalBlock(
+                blockType = UserTierBlock.BLOCK_TYPE,
+                transaction = expectedTransaction,
+                publicKey = any()
+            )
+        }
     }
 
     @Test
     @DisplayName("Should convert TrustChainBlock to UserTierBlock")
     fun `test toBlock conversion`() {
         // Arrange
-        val trustChainBlock = mockk<TrustChainBlock> {
-            every { transaction } returns mapOf(
-                "type" to UserTierBlock.BLOCK_TYPE,
-                "userId" to "testUser",
-                "tier" to "PRO",
-                "validFrom" to 1000L,
-                "validUntil" to 2000L
-            )
-        }
+        val trustChainBlock =
+            mockk<TrustChainBlock> {
+                every { transaction } returns
+                    mapOf(
+                        "type" to UserTierBlock.BLOCK_TYPE,
+                        "userId" to "testUser",
+                        "tier" to "PRO",
+                        "validFrom" to 1000L,
+                        "validUntil" to 2000L
+                    )
+            }
 
         // Act
         val result = userTierBlockRepository.toBlock(trustChainBlock)
@@ -151,15 +165,17 @@ class UserTierBlockRepositoryTest {
     @DisplayName("Should convert TrustChainBlock to UserTierBlock with null validUntil")
     fun `test toBlock conversion with null validUntil`() {
         // Arrange
-        val trustChainBlock = mockk<TrustChainBlock> {
-            every { transaction } returns mapOf(
-                "type" to UserTierBlock.BLOCK_TYPE,
-                "userId" to "testUser",
-                "tier" to "BASIC",
-                "validFrom" to 1000L,
-                "validUntil" to null
-            )
-        }
+        val trustChainBlock =
+            mockk<TrustChainBlock> {
+                every { transaction } returns
+                    mapOf(
+                        "type" to UserTierBlock.BLOCK_TYPE,
+                        "userId" to "testUser",
+                        "tier" to "BASIC",
+                        "validFrom" to 1000L,
+                        "validUntil" to null
+                    )
+            }
 
         // Act
         val result = userTierBlockRepository.toBlock(trustChainBlock)

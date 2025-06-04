@@ -6,7 +6,6 @@ import org.junit.jupiter.api.DisplayName
 
 @DisplayName("ReleaseRequestMessage Tests")
 class ReleaseRequestMessageTest {
-
     @Test
     @DisplayName("Should create ReleaseRequestMessage with all properties")
     fun `test ReleaseRequestMessage creation with all properties`() {
@@ -16,11 +15,12 @@ class ReleaseRequestMessageTest {
         val requestTimestamp = System.currentTimeMillis()
 
         // Act
-        val message = ReleaseRequestMessage(
-            releaseId = releaseId,
-            userPublicKey = userPublicKey,
-            requestTimestamp = requestTimestamp
-        )
+        val message =
+            ReleaseRequestMessage(
+                releaseId = releaseId,
+                userPublicKey = userPublicKey,
+                requestTimestamp = requestTimestamp
+            )
 
         // Assert
         assertEquals(releaseId, message.releaseId)
@@ -36,10 +36,11 @@ class ReleaseRequestMessageTest {
         val userPublicKey = "test-key-456"
 
         // Act
-        val message = ReleaseRequestMessage(
-            releaseId = releaseId,
-            userPublicKey = userPublicKey
-        )
+        val message =
+            ReleaseRequestMessage(
+                releaseId = releaseId,
+                userPublicKey = userPublicKey
+            )
 
         // Assert
         assertEquals(releaseId, message.releaseId)
@@ -56,16 +57,18 @@ class ReleaseRequestMessageTest {
         val requestTimestamp = System.currentTimeMillis()
 
         // Act
-        val message1 = ReleaseRequestMessage(
-            releaseId = releaseId,
-            userPublicKey = userPublicKey,
-            requestTimestamp = requestTimestamp
-        )
-        val message2 = ReleaseRequestMessage(
-            releaseId = releaseId,
-            userPublicKey = userPublicKey,
-            requestTimestamp = requestTimestamp
-        )
+        val message1 =
+            ReleaseRequestMessage(
+                releaseId = releaseId,
+                userPublicKey = userPublicKey,
+                requestTimestamp = requestTimestamp
+            )
+        val message2 =
+            ReleaseRequestMessage(
+                releaseId = releaseId,
+                userPublicKey = userPublicKey,
+                requestTimestamp = requestTimestamp
+            )
 
         // Assert
         assertEquals(message1, message2)
@@ -81,16 +84,18 @@ class ReleaseRequestMessageTest {
         val requestTimestamp = System.currentTimeMillis()
 
         // Act
-        val message1 = ReleaseRequestMessage(
-            releaseId = releaseId,
-            userPublicKey = userPublicKey,
-            requestTimestamp = requestTimestamp
-        )
-        val message2 = ReleaseRequestMessage(
-            releaseId = "different-release",
-            userPublicKey = userPublicKey,
-            requestTimestamp = requestTimestamp
-        )
+        val message1 =
+            ReleaseRequestMessage(
+                releaseId = releaseId,
+                userPublicKey = userPublicKey,
+                requestTimestamp = requestTimestamp
+            )
+        val message2 =
+            ReleaseRequestMessage(
+                releaseId = "different-release",
+                userPublicKey = userPublicKey,
+                requestTimestamp = requestTimestamp
+            )
 
         // Assert
         assertNotEquals(message1, message2)
@@ -100,7 +105,6 @@ class ReleaseRequestMessageTest {
 
 @DisplayName("ReleaseResponseMessage Tests")
 class ReleaseResponseMessageTest {
-
     @Test
     @DisplayName("Should create ReleaseResponseMessage with magnet link")
     fun `test ReleaseResponseMessage creation with magnet link`() {
@@ -109,10 +113,11 @@ class ReleaseResponseMessageTest {
         val magnetLink = "magnet:?xt=urn:btih:test"
 
         // Act
-        val message = ReleaseResponseMessage(
-            releaseId = releaseId,
-            magnetLink = magnetLink
-        )
+        val message =
+            ReleaseResponseMessage(
+                releaseId = releaseId,
+                magnetLink = magnetLink
+            )
 
         // Assert
         assertEquals(releaseId, message.releaseId)
@@ -126,10 +131,11 @@ class ReleaseResponseMessageTest {
         val releaseId = "test-release-123"
 
         // Act
-        val message = ReleaseResponseMessage(
-            releaseId = releaseId,
-            magnetLink = null
-        )
+        val message =
+            ReleaseResponseMessage(
+                releaseId = releaseId,
+                magnetLink = null
+            )
 
         // Assert
         assertEquals(releaseId, message.releaseId)
@@ -144,14 +150,16 @@ class ReleaseResponseMessageTest {
         val magnetLink = "magnet:?xt=urn:btih:test"
 
         // Act
-        val message1 = ReleaseResponseMessage(
-            releaseId = releaseId,
-            magnetLink = magnetLink
-        )
-        val message2 = ReleaseResponseMessage(
-            releaseId = releaseId,
-            magnetLink = magnetLink
-        )
+        val message1 =
+            ReleaseResponseMessage(
+                releaseId = releaseId,
+                magnetLink = magnetLink
+            )
+        val message2 =
+            ReleaseResponseMessage(
+                releaseId = releaseId,
+                magnetLink = magnetLink
+            )
 
         // Assert
         assertEquals(message1, message2)
@@ -166,14 +174,16 @@ class ReleaseResponseMessageTest {
         val magnetLink = "magnet:?xt=urn:btih:test"
 
         // Act
-        val message1 = ReleaseResponseMessage(
-            releaseId = releaseId,
-            magnetLink = magnetLink
-        )
-        val message2 = ReleaseResponseMessage(
-            releaseId = "different-release",
-            magnetLink = magnetLink
-        )
+        val message1 =
+            ReleaseResponseMessage(
+                releaseId = releaseId,
+                magnetLink = magnetLink
+            )
+        val message2 =
+            ReleaseResponseMessage(
+                releaseId = "different-release",
+                magnetLink = magnetLink
+            )
 
         // Assert
         assertNotEquals(message1, message2)
@@ -187,14 +197,16 @@ class ReleaseResponseMessageTest {
         val releaseId = "test-release-123"
 
         // Act
-        val message1 = ReleaseResponseMessage(
-            releaseId = releaseId,
-            magnetLink = "magnet:?xt=urn:btih:test1"
-        )
-        val message2 = ReleaseResponseMessage(
-            releaseId = releaseId,
-            magnetLink = "magnet:?xt=urn:btih:test2"
-        )
+        val message1 =
+            ReleaseResponseMessage(
+                releaseId = releaseId,
+                magnetLink = "magnet:?xt=urn:btih:test1"
+            )
+        val message2 =
+            ReleaseResponseMessage(
+                releaseId = releaseId,
+                magnetLink = "magnet:?xt=urn:btih:test2"
+            )
 
         // Assert
         assertNotEquals(message1, message2)

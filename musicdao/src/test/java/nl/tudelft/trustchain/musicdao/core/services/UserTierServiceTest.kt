@@ -24,122 +24,143 @@ class UserTierServiceTest {
 
     @Test
     @DisplayName("Should successfully upgrade to PRO tier with payment and block creation")
-    fun `test upgradeToPro with successful payment and block creation`() = runBlocking {
-        // Arrange
-        val userId = "testUser123"
-        val durationMonths = 3
-        coEvery { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) } returns true
-        coEvery { userTierBlockRepository.create(
-            userId = userId,
-            tier = "PRO",
-            validFrom = any(),
-            validUntil = any()
-        ) } returns mockk()
+    fun `test upgradeToPro with successful payment and block creation`() =
+        runBlocking {
+            // Arrange
+            val userId = "testUser123"
+            val durationMonths = 3
+            coEvery { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) } returns true
+            coEvery {
+                userTierBlockRepository.create(
+                    userId = userId,
+                    tier = "PRO",
+                    validFrom = any(),
+                    validUntil = any()
+                )
+            } returns mockk()
 
-        // Act
-        val result = userTierService.upgradeToPro(userId, durationMonths, bitcoinWalletViewModel)
+            // Act
+            val result = userTierService.upgradeToPro(userId, durationMonths, bitcoinWalletViewModel)
 
-        // Assert
-        assertTrue(result)
-        coVerify { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) }
-        coVerify { userTierBlockRepository.create(
-            userId = userId,
-            tier = "PRO",
-            validFrom = any(),
-            validUntil = any()
-        ) }
-    }
+            // Assert
+            assertTrue(result)
+            coVerify { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) }
+            coVerify {
+                userTierBlockRepository.create(
+                    userId = userId,
+                    tier = "PRO",
+                    validFrom = any(),
+                    validUntil = any()
+                )
+            }
+        }
 
     @Test
     @DisplayName("Should fail to upgrade to PRO tier when payment fails")
-    fun `test upgradeToPro with failed payment`() = runBlocking {
-        // Arrange
-        val userId = "testUser123"
-        coEvery { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) } returns false
+    fun `test upgradeToPro with failed payment`() =
+        runBlocking {
+            // Arrange
+            val userId = "testUser123"
+            coEvery { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) } returns false
 
-        // Act
-        val result = userTierService.upgradeToPro(userId, null, bitcoinWalletViewModel)
+            // Act
+            val result = userTierService.upgradeToPro(userId, null, bitcoinWalletViewModel)
 
-        // Assert
-        assertFalse(result)
-        coVerify { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) }
-        coVerify(exactly = 0) { userTierBlockRepository.create(any(), any(), any(), any()) }
-    }
+            // Assert
+            assertFalse(result)
+            coVerify { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) }
+            coVerify(exactly = 0) { userTierBlockRepository.create(any(), any(), any(), any()) }
+        }
 
     @Test
     @DisplayName("Should fail to upgrade to PRO tier when block creation fails")
-    fun `test upgradeToPro with successful payment but failed block creation`() = runBlocking {
-        // Arrange
-        val userId = "testUser123"
-        coEvery { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) } returns true
-        coEvery { userTierBlockRepository.create(
-            userId = userId,
-            tier = "PRO",
-            validFrom = any(),
-            validUntil = any()
-        ) } returns null
+    fun `test upgradeToPro with successful payment but failed block creation`() =
+        runBlocking {
+            // Arrange
+            val userId = "testUser123"
+            coEvery { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) } returns true
+            coEvery {
+                userTierBlockRepository.create(
+                    userId = userId,
+                    tier = "PRO",
+                    validFrom = any(),
+                    validUntil = any()
+                )
+            } returns null
 
-        // Act
-        val result = userTierService.upgradeToPro(userId, null, bitcoinWalletViewModel)
+            // Act
+            val result = userTierService.upgradeToPro(userId, null, bitcoinWalletViewModel)
 
-        // Assert
-        assertFalse(result)
-        coVerify { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) }
-        coVerify { userTierBlockRepository.create(
-            userId = userId,
-            tier = "PRO",
-            validFrom = any(),
-            validUntil = any()
-        ) }
-    }
+            // Assert
+            assertFalse(result)
+            coVerify { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) }
+            coVerify {
+                userTierBlockRepository.create(
+                    userId = userId,
+                    tier = "PRO",
+                    validFrom = any(),
+                    validUntil = any()
+                )
+            }
+        }
 
     @Test
     @DisplayName("Should successfully downgrade to BASIC tier")
-    fun `test downgradeToBasic with successful block creation`() = runBlocking {
-        // Arrange
-        val userId = "testUser123"
-        coEvery { userTierBlockRepository.create(
-            userId = userId,
-            tier = "BASIC",
-            validFrom = any(),
-            validUntil = null
-        ) } returns mockk()
+    fun `test downgradeToBasic with successful block creation`() =
+        runBlocking {
+            // Arrange
+            val userId = "testUser123"
+            coEvery {
+                userTierBlockRepository.create(
+                    userId = userId,
+                    tier = "BASIC",
+                    validFrom = any(),
+                    validUntil = null
+                )
+            } returns mockk()
 
-        // Act
-        val result = userTierService.downgradeToBasic(userId)
+            // Act
+            val result = userTierService.downgradeToBasic(userId)
 
-        // Assert
-        assertTrue(result)
-        coVerify { userTierBlockRepository.create(
-            userId = userId,
-            tier = "BASIC",
-            validFrom = any(),
-            validUntil = null
-        ) }
-    }
+            // Assert
+            assertTrue(result)
+            coVerify {
+                userTierBlockRepository.create(
+                    userId = userId,
+                    tier = "BASIC",
+                    validFrom = any(),
+                    validUntil = null
+                )
+            }
+        }
 
     @Test
     @DisplayName("Should fail to downgrade to BASIC tier when block creation fails")
-    fun `test downgradeToBasic with failed block creation`() = runBlocking {
-        // Arrange
-        val userId = "testUser123"
-        coEvery { userTierBlockRepository.create(
-            userId = userId,
-            tier = "BASIC",
-            validFrom = any(),
-            validUntil = null
-        ) } returns null
+    fun `test downgradeToBasic with failed block creation`() =
+        runBlocking {
+            // Arrange
+            val userId = "testUser123"
+            coEvery {
+                userTierBlockRepository.create(
+                    userId = userId,
+                    tier = "BASIC",
+                    validFrom = any(),
+                    validUntil = null
+                )
+            } returns null
 
-        // Act
-        val result = userTierService.downgradeToBasic(userId)
+            // Act
+            val result = userTierService.downgradeToBasic(userId)
 
-        // Assert
-        assertFalse(result)
-        coVerify { userTierBlockRepository.create(
-            userId = userId,
-            tier = "BASIC",
-            validFrom = any(),
-            validUntil = null
-        ) }
-    }
+            // Assert
+            assertFalse(result)
+            coVerify {
+                userTierBlockRepository.create(
+                    userId = userId,
+                    tier = "BASIC",
+                    validFrom = any(),
+                    validUntil = null
+                )
+            }
+        }
 }

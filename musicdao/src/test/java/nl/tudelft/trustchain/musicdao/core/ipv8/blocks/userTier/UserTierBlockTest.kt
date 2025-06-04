@@ -6,7 +6,6 @@ import org.junit.jupiter.api.DisplayName
 
 @DisplayName("UserTierBlock Tests")
 class UserTierBlockTest {
-
     @Test
     @DisplayName("Should create UserTierBlock with all properties")
     fun `test UserTierBlock creation with all properties`() {
@@ -17,12 +16,13 @@ class UserTierBlockTest {
         val validUntil = validFrom + 1000L
 
         // Act
-        val block = UserTierBlock(
-            userId = userId,
-            tier = tier,
-            validFrom = validFrom,
-            validUntil = validUntil
-        )
+        val block =
+            UserTierBlock(
+                userId = userId,
+                tier = tier,
+                validFrom = validFrom,
+                validUntil = validUntil
+            )
 
         // Assert
         assertEquals(userId, block.userId)
@@ -40,12 +40,13 @@ class UserTierBlockTest {
         val validFrom = System.currentTimeMillis()
 
         // Act
-        val block = UserTierBlock(
-            userId = userId,
-            tier = tier,
-            validFrom = validFrom,
-            validUntil = null
-        )
+        val block =
+            UserTierBlock(
+                userId = userId,
+                tier = tier,
+                validFrom = validFrom,
+                validUntil = null
+            )
 
         // Assert
         assertEquals(userId, block.userId)
@@ -71,18 +72,20 @@ class UserTierBlockTest {
         val validUntil = validFrom + 1000L
 
         // Act
-        val block1 = UserTierBlock(
-            userId = userId,
-            tier = tier,
-            validFrom = validFrom,
-            validUntil = validUntil
-        )
-        val block2 = UserTierBlock(
-            userId = userId,
-            tier = tier,
-            validFrom = validFrom,
-            validUntil = validUntil
-        )
+        val block1 =
+            UserTierBlock(
+                userId = userId,
+                tier = tier,
+                validFrom = validFrom,
+                validUntil = validUntil
+            )
+        val block2 =
+            UserTierBlock(
+                userId = userId,
+                tier = tier,
+                validFrom = validFrom,
+                validUntil = validUntil
+            )
 
         // Assert
         assertEquals(block1, block2)
@@ -99,18 +102,20 @@ class UserTierBlockTest {
         val validUntil = validFrom + 1000L
 
         // Act
-        val block1 = UserTierBlock(
-            userId = userId,
-            tier = tier,
-            validFrom = validFrom,
-            validUntil = validUntil
-        )
-        val block2 = UserTierBlock(
-            userId = "differentUser",
-            tier = tier,
-            validFrom = validFrom,
-            validUntil = validUntil
-        )
+        val block1 =
+            UserTierBlock(
+                userId = userId,
+                tier = tier,
+                validFrom = validFrom,
+                validUntil = validUntil
+            )
+        val block2 =
+            UserTierBlock(
+                userId = "differentUser",
+                tier = tier,
+                validFrom = validFrom,
+                validUntil = validUntil
+            )
 
         // Assert
         assertNotEquals(block1, block2)
@@ -126,18 +131,20 @@ class UserTierBlockTest {
         val validUntil = validFrom + 1000L
 
         // Act
-        val block1 = UserTierBlock(
-            userId = userId,
-            tier = "PRO",
-            validFrom = validFrom,
-            validUntil = validUntil
-        )
-        val block2 = UserTierBlock(
-            userId = userId,
-            tier = "BASIC",
-            validFrom = validFrom,
-            validUntil = validUntil
-        )
+        val block1 =
+            UserTierBlock(
+                userId = userId,
+                tier = "PRO",
+                validFrom = validFrom,
+                validUntil = validUntil
+            )
+        val block2 =
+            UserTierBlock(
+                userId = userId,
+                tier = "BASIC",
+                validFrom = validFrom,
+                validUntil = validUntil
+            )
 
         // Assert
         assertNotEquals(block1, block2)
