@@ -46,7 +46,9 @@ class UserTierService
             if (block == null) {
                 Log.e("UserTierService", "Failed to create PRO tier block for user $userId")
             } else {
-                Log.i("UserTierService", "Successfully upgraded user $userId to PRO tier")
+                // Publish transaction to blockchain.
+                userTierBlockRepository.sendBlock(block)
+                Log.i("UserTierService", "Successfully upgraded user $userId to PRO tier and uploaded the 'I'm Pro' message")
             }
 
             return block != null

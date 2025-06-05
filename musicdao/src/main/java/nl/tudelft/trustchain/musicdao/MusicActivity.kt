@@ -38,6 +38,9 @@ import kotlinx.coroutines.*
 import nl.tudelft.trustchain.musicdao.core.coin.WalletManager
 import javax.inject.Inject
 import nl.tudelft.ipv8.attestation.trustchain.ANY_COUNTERPARTY_PK
+import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier.UserTierBlock
+import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
+import org.bouncycastle.util.encoders.Hex
 
 /**
  * This maintains the interactions between the UI and seeding/trust-chain
@@ -83,6 +86,7 @@ class MusicActivity : AppCompatActivity() {
 
     private var walletAddressJob: Job? = null
     private var walletBalanceJob: Job? = null
+    private var listenForImProMessages: Job? = null
 
     @DelicateCoroutinesApi
     @ExperimentalAnimationApi
@@ -97,6 +101,9 @@ class MusicActivity : AppCompatActivity() {
             setupMusicCommunity.registerListeners()
             albumRepository.refreshCache()
             torrentEngine.seedStrategy()
+
+            startListeningForImProMessages()
+            startListeningForMagnetLink()
 
             if (isManualLeader) {
                 Log.d("DonationWallet", "User is the designated leader.")
@@ -406,6 +413,51 @@ class MusicActivity : AppCompatActivity() {
                     delay(5000) // Adjust the delay as needed (e.g., every 5 seconds)
                 }
             }
+    }
+
+    private val seenBlockIds = mutableSetOf<Int>()
+
+    private fun startListeningForImProMessages() {
+        listenForImProMessages = CoroutineScope(Dispatchers.IO).launch {
+            while (isActive) {
+                val blocks = musicCommunity.database.getBlocksWithType(UserTierBlock.BLOCK_TYPE)
+
+                val myPublicKey = musicCommunity.publicKeyHex()
+                val myAlbums = albumRepository.getAlbumsFromArtist(myPublicKey)
+
+                for (block in blocks) {
+                    if (block.hashNumber in seenBlockIds) {
+                        continue
+                    }
+                    val userThatPromotedToProString = block.transaction["userId"] as? String
+                    if (userThatPromotedToProString != null) {
+                        try {
+                            val userThatPromotedToPro: ByteArray =
+                                Hex.decode(userThatPromotedToProString)
+                            for (album in myAlbums) {
+                                // Publish magnet for the user that was promoted to Pro account.
+                                val tx =
+                                    mapOf(
+                                        "album_id" to album.id,
+                                        "magnet" to album.magnet
+                                    )
+                                // Create a proposal block with ANY_COUNTERPARTY_PK to broadcast to all peers
+                                val result =
+                                    musicCommunity.createProposalBlock(
+                                        "MAGNET_LINK",
+                                        tx,
+                                        userThatPromotedToPro
+                                    )
+                                musicCommunity.sendBlock(result, ttl = 2)
+                            }
+                        } catch (e: Exception) {
+                            println("Failed to decode userId: $userThatPromotedToProString")
+                        }
+                    }
+                }
+                delay(5000) // Optional polling interval
+            }
+        }
     }
 
     @EntryPoint

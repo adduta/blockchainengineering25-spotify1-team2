@@ -47,4 +47,8 @@ class UserTierBlockRepository
                 validUntil = (transaction["validUntil"] as? Number)?.toLong()
             )
         }
+
+        fun sendBlock(block: TrustChainBlock): Unit {
+            return musicCommunity.sendBlock(block, null, 1000)
+        }
     }

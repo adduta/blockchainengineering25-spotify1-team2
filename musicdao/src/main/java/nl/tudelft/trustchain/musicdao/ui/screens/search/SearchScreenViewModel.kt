@@ -15,86 +15,145 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.util.Log
 
 @HiltViewModel
 class SearchScreenViewModel
-    @Inject
-    constructor(
-        private val albumRepository: AlbumRepository,
-        private val releaseRepository: ReleaseRepository,
-        private val musicCommunity: MusicCommunity
-    ) : ViewModel() {
-        private val _isRefreshing: MutableLiveData<Boolean> = MutableLiveData()
-        val isRefreshing: LiveData<Boolean> = _isRefreshing
+@Inject
+constructor(
+    private val albumRepository: AlbumRepository,
+    private val releaseRepository: ReleaseRepository,
+    private val musicCommunity: MusicCommunity
+) : ViewModel() {
+    private val TAG = "searchscreenviewmodel"
+    private val _isRefreshing: MutableLiveData<Boolean> = MutableLiveData()
+    val isRefreshing: LiveData<Boolean> = _isRefreshing
 
-        private val _searchQuery: MutableStateFlow<String> = MutableStateFlow("")
-        val searchQuery: StateFlow<String> = _searchQuery
+    private val _searchQuery: MutableStateFlow<String> = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
 
-        private val _searchResult: MutableStateFlow<List<Album>> = MutableStateFlow(listOf())
-        val searchResult: StateFlow<List<Album>> = _searchResult
+    private val _searchResult: MutableStateFlow<List<Album>> = MutableStateFlow(listOf())
+    val searchResult: StateFlow<List<Album>> = _searchResult
 
-        private val _peerAmount: MutableLiveData<Int> = MutableLiveData()
-        var peerAmount: LiveData<Int> = _peerAmount
+    private val _peerAmount: MutableLiveData<Int> = MutableLiveData()
+    var peerAmount: LiveData<Int> = _peerAmount
 
-        private val _totalReleaseAmount: MutableLiveData<Int> = MutableLiveData()
-        var totalReleaseAmount: LiveData<Int> = _totalReleaseAmount
+    private val _totalReleaseAmount: MutableLiveData<Int> = MutableLiveData()
+    var totalReleaseAmount: LiveData<Int> = _totalReleaseAmount
 
-        private var searchJob: Job? = null
+    private var searchJob: Job? = null
 
-        init {
-            viewModelScope.launch {
-                val userPublicKey = musicCommunity.publicKeyHex()
-                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
-                _peerAmount.value = musicCommunity.getPeers().size
-                _totalReleaseAmount.value = albumRepository.getAlbums(userPublicKey, releaseRepository).size
-            }
-        }
-
-        fun searchDebounced(searchText: String) {
-            _searchQuery.value = searchText
-
-            searchJob?.cancel()
-            searchJob =
-                viewModelScope.launch {
-                    delay(DEBOUNCE_DELAY)
-                    search(searchText)
-                }
-        }
-
-        fun downloadedFirstInListOfAlbums(list: List<Album>): List<Album> {
-            // put downloaded albums first
-            val downloadedAlbums =
-                list.sortedBy { album ->
-                    album.songs != null && album.songs.isNotEmpty()
-                }.reversed()
-            return downloadedAlbums
-        }
-
-        private suspend fun search(searchText: String) {
+    init {
+        viewModelScope.launch {
             val userPublicKey = musicCommunity.publicKeyHex()
-            if (searchText.isEmpty()) {
-                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
-            } else {
-                val result = albumRepository.searchAlbums(searchText)
-                _searchResult.value = downloadedFirstInListOfAlbums(result)
-            }
-        }
+            _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
+            _peerAmount.value = musicCommunity.getPeers().size
+            _totalReleaseAmount.value = albumRepository.getAlbums(userPublicKey, releaseRepository).size
 
-        fun refresh() {
-            viewModelScope.launch {
-                _isRefreshing.value = true
-                delay(500)
-                val userPublicKey = musicCommunity.publicKeyHex()
-                if (_searchQuery.value.isEmpty()) {
-                    _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
+            _searchResult.value.forEach { album ->
+                viewModelScope.launch {
+                    val magnetLink = releaseRepository.getFullRelease(album.id, userPublicKey)
+                    Log.i(TAG, "Init - Magnet link for album ${album.id}: $magnetLink")
+                    if (magnetLink != null) {
+                        // Update the album with the magnet link
+                        val updatedAlbums =
+                            _searchResult.value.map {
+                                if (it.id == album.id) {
+                                    it.copy(magnet = magnetLink)
+                                } else {
+                                    it
+                                }
+                            }
+                        _searchResult.value = updatedAlbums
+                    }
                 }
-                _peerAmount.value = musicCommunity.getPeers().size
-                _totalReleaseAmount.value = albumRepository.getAlbums(userPublicKey, releaseRepository).size
-                _isRefreshing.value = false
             }
-        }
-
-        companion object {
-            private const val DEBOUNCE_DELAY = 200L
         }
     }
+
+    fun searchDebounced(searchText: String) {
+        _searchQuery.value = searchText
+
+        searchJob?.cancel()
+        searchJob =
+            viewModelScope.launch {
+                delay(DEBOUNCE_DELAY)
+                search(searchText)
+            }
+    }
+
+    fun downloadedFirstInListOfAlbums(list: List<Album>): List<Album> {
+        // put downloaded albums first
+        val downloadedAlbums =
+            list.sortedBy { album ->
+                album.songs != null && album.songs.isNotEmpty()
+            }.reversed()
+        return downloadedAlbums
+    }
+
+    private suspend fun search(searchText: String) {
+        val userPublicKey = musicCommunity.publicKeyHex()
+        if (searchText.isEmpty()) {
+            _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
+        } else {
+            val result = albumRepository.searchAlbums(searchText)
+            _searchResult.value = downloadedFirstInListOfAlbums(result)
+        }
+
+        _searchResult.value.forEach { album ->
+            viewModelScope.launch {
+                val magnetLink = releaseRepository.getFullRelease(album.id, userPublicKey)
+                Log.i(TAG, "Search - Magnet link for album ${album.id}: $magnetLink")
+                if (magnetLink != null) {
+                    // Update the album with the magnet link
+                    val updatedAlbums =
+                        _searchResult.value.map {
+                            if (it.id == album.id) {
+                                it.copy(magnet = magnetLink)
+                            } else {
+                                it
+                            }
+                        }
+                    _searchResult.value = updatedAlbums
+                }
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            delay(500)
+            val userPublicKey = musicCommunity.publicKeyHex()
+            if (_searchQuery.value.isEmpty()) {
+                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
+
+                _searchResult.value.forEach { album ->
+                    viewModelScope.launch {
+                        val magnetLink = releaseRepository.getFullRelease(album.id, userPublicKey)
+                        Log.i(TAG, "Refresh - Magnet link for album ${album.id}: $magnetLink")
+                        if (magnetLink != null) {
+                            // Update the album with the magnet link
+                            val updatedAlbums =
+                                _searchResult.value.map {
+                                    if (it.id == album.id) {
+                                        it.copy(magnet = magnetLink)
+                                    } else {
+                                        it
+                                    }
+                                }
+                            _searchResult.value = updatedAlbums
+                        }
+                    }
+                }
+            }
+            _peerAmount.value = musicCommunity.getPeers().size
+            _totalReleaseAmount.value = albumRepository.getAlbums(userPublicKey, releaseRepository).size
+            _isRefreshing.value = false
+        }
+    }
+
+    companion object {
+        private const val DEBOUNCE_DELAY = 200L
+    }
+}
