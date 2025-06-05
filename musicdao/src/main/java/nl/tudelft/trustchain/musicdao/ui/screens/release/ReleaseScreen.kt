@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -214,7 +215,54 @@ fun ReleaseScreen(
                 if (current != null) {
                     TorrentStatusScreen(current)
                 } else {
-                    Text("Could not find torrent.")
+                    if (albumState?.magnet == "access_restricted") {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text =
+                                    when (viewModel.accessReason.collectAsState().value) {
+                                        ReleaseScreenViewModel.AccessReason.RESTRICTED -> "This release is currently restricted"
+                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "This release is no longer available"
+                                        ReleaseScreenViewModel.AccessReason.DOWNLOADING -> "Downloading release..."
+                                        ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
+                                        null -> "Release not available for download"
+                                    },
+                                style = MaterialTheme.typography.h6,
+                                color = MaterialTheme.colors.error
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text =
+                                    when (viewModel.accessReason.collectAsState().value) {
+                                        ReleaseScreenViewModel.AccessReason.RESTRICTED ->
+                                            "" +
+                                                "Upgrade to Pro to access this release immediately, " +
+                                                "or wait for the release period to end"
+                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET ->
+                                            "" +
+                                                "The artist may have removed this release"
+                                        ReleaseScreenViewModel.AccessReason.DOWNLOADING ->
+                                            "" +
+                                                "Please wait while we download the release"
+                                        ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR ->
+                                            "Please try again later"
+                                        null ->
+                                            "This could be because:\n•" +
+                                                " You need to upgrade to Pro\n• " +
+                                                "The release is too new\n•" +
+                                                " The release is no longer available"
+                                    },
+                                style = MaterialTheme.typography.body1,
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             }
         }

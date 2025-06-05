@@ -49,6 +49,9 @@ class ReleaseScreenViewModel
         private val _torrentState: MutableStateFlow<TorrentStatus?> = MutableStateFlow(null)
         val torrentState: StateFlow<TorrentStatus?> = _torrentState
 
+        private val _accessReason: MutableStateFlow<AccessReason?> = MutableStateFlow(null)
+        val accessReason: StateFlow<AccessReason?> = _accessReason
+
         init {
             viewModelScope.launch {
                 releaseLiveData = database.dao.getLiveData(releaseId)
@@ -57,6 +60,23 @@ class ReleaseScreenViewModel
                 val release = database.dao.get(releaseId)
 
                 release?.let { _release ->
+                    // Determine access reason
+                    _accessReason.value =
+                        when {
+                            _release.magnet == "access_restricted" -> AccessReason.RESTRICTED
+                            _release.magnet.isEmpty() -> AccessReason.NO_MAGNET
+                            !_release.isDownloaded && _release.magnet.isNotEmpty() -> {
+                                try {
+                                    torrentEngine.download(_release.magnet)
+                                    AccessReason.DOWNLOADING
+                                } catch (e: Exception) {
+                                    Log.e("ReleaseScreenViewModel", "Error downloading torrent: ${e.message}")
+                                    AccessReason.DOWNLOAD_ERROR
+                                }
+                            }
+                            else -> null
+                        }
+
                     // Skip download for access-restricted releases
                     if (_release.magnet != "access_restricted") {
                         if (!_release.isDownloaded && _release.magnet.isNotEmpty()) {
@@ -80,5 +100,12 @@ class ReleaseScreenViewModel
                     }
                 }
             }
+        }
+
+        enum class AccessReason {
+            RESTRICTED, // Release is restricted (needs pro or waiting period)
+            NO_MAGNET, // No magnet link available
+            DOWNLOADING, // Currently downloading
+            DOWNLOAD_ERROR // Error occurred during download
         }
     }

@@ -1,11 +1,14 @@
 package nl.tudelft.trustchain.musicdao.ui.screens.profile
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Artist
 import nl.tudelft.trustchain.musicdao.core.repositories.ArtistRepository
+import nl.tudelft.trustchain.musicdao.core.repositories.AlbumRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -28,7 +31,8 @@ class ProfileScreenViewModel
         private val artistRepository: ArtistRepository,
         private val userTierService: UserTierService,
         private val userTierBlockRepository: UserTierBlockRepository,
-        private val userTierVerifier: UserTierVerifier
+        private val userTierVerifier: UserTierVerifier,
+        private val albumRepository: AlbumRepository
     ) : ViewModel() {
         private val _profile: MutableStateFlow<Artist?> = MutableStateFlow(null)
         var profile: StateFlow<Artist?> = _profile
@@ -86,6 +90,10 @@ class ProfileScreenViewModel
                     _accountType.value = AccountType.PRO
                     // Calculate validUntil based on months
                     _validUntil.value = Instant.now().plusSeconds(months * 30L * 24L * 60L * 60L)
+                    // Force refresh releases to get updated magnet links
+                    _releases.value = artistRepository.getArtistReleases(publicKey = publicKey)
+                    // Force refresh the cache to ensure magnet links are updated
+                    albumRepository.refreshCache()
                 }
             }
         }

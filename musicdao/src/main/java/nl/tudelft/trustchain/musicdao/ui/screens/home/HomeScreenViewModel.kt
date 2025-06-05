@@ -34,26 +34,37 @@ class HomeScreenViewModel
                 // Observe the albums flow
                 albumRepository.getAlbumsFlow(userPublicKey).observeForever { albums ->
                     // For each album, fetch the magnet link in the background
-                    albums.forEach { album ->
-                        viewModelScope.launch {
-                            val magnetLink = releaseRepository.getFullRelease(album.id, userPublicKey)
-                            if (magnetLink != null) {
-                                // Update the album with the magnet link
-                                val updatedAlbums =
-                                    _releases.value?.map {
-                                        if (it.id == album.id) {
-                                            it.copy(magnet = magnetLink)
-                                        } else {
-                                            it
-                                        }
-                                    } ?: albums
-                                _releases.value = updatedAlbums
-                            }
-                        }
-                    }
+                    refreshMagnetLinks(albums, userPublicKey)
                 }
 
                 _peerAmount.value = musicCommunity.getPeers().size
+            }
+        }
+
+        /**
+         * Force refresh magnet links for all albums
+         * This should be called when the user's pro status changes
+         */
+        fun refreshMagnetLinks(
+            albums: List<Album>,
+            userPublicKey: String
+        ) {
+            viewModelScope.launch {
+                albums.forEach { album ->
+                    val magnetLink = releaseRepository.getFullRelease(album.id, userPublicKey)
+                    if (magnetLink != null) {
+                        // Update the album with the magnet link
+                        val updatedAlbums =
+                            _releases.value?.map {
+                                if (it.id == album.id) {
+                                    it.copy(magnet = magnetLink)
+                                } else {
+                                    it
+                                }
+                            } ?: albums
+                        _releases.value = updatedAlbums
+                    }
+                }
             }
         }
     }

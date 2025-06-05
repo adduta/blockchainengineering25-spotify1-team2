@@ -7,6 +7,7 @@ import nl.tudelft.ipv8.util.hexToBytes
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import android.util.Log
 
 class ReleaseRequestHandler
     @Inject
@@ -29,6 +30,8 @@ class ReleaseRequestHandler
             val userPublicKeyBytes = request.userPublicKey.hexToBytes()
             val isProUser = userTierVerifier.isProUser(userPublicKeyBytes)
             val isAccessible = isProUser || isReleaseAccessible(releaseDate)
+
+            Log.d("ReleaseRequestHandler", "User isPro: $isProUser, isAccessible: $isAccessible")
 
             return ReleaseResponseMessage(
                 releaseId = request.releaseId,

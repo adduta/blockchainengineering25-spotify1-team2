@@ -148,6 +148,7 @@ class AlbumRepository
                         null
                     }
 
+                // Update or insert the album entity
                 database.dao.insert(
                     AlbumEntity(
                         id = it.releaseId,
@@ -165,5 +166,11 @@ class AlbumRepository
                     )
                 )
             }
+
+            // Force a database update to ensure changes are persisted
+            database.dao.getAll()
+            
+            // Log the refresh for debugging
+            Log.d("AlbumRepository", "Cache refreshed with ${releaseBlocks.size} releases")
         }
     }

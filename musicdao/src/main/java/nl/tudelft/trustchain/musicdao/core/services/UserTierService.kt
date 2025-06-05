@@ -4,6 +4,7 @@ import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier.UserTierBlockRep
 import nl.tudelft.trustchain.musicdao.ui.screens.wallet.BitcoinWalletViewModel
 import javax.inject.Inject
 import android.util.Log
+import org.bitcoinj.core.Coin
 
 class UserTierService
     @Inject
@@ -17,39 +18,62 @@ class UserTierService
         ): Boolean {
             Log.i("UserTierService", "Attempting to upgrade user $userId to PRO tier")
 
-            // TODO(VianRobotin): Add PK of the wallet used for the lottery system.
-            val res =
-                bitcoinWalletViewModel.walletService.sendCoins(
+            try {
+                // Check wallet balance first
+                val balance = bitcoinWalletViewModel.confirmedBalance.value
+                if (balance == null) {
+                    Log.e("UserTierService", "Failed to get wallet balance")
+                    return false
+                }
+
+                val requiredAmount = Coin.parseCoin("0.1")
+                if (balance.isLessThan(requiredAmount)) {
+                    Log.e("UserTierService", "Insufficient balance. Required: $requiredAmount, Available: $balance")
+                    return false
+                }
+
+                // Send payment
+                Log.d("UserTierService", "Sending payment of 0.1 BTC")
+                val paymentSuccess = bitcoinWalletViewModel.walletService.sendCoins(
                     "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
                     "0.1"
                 )
 
-            if (!res) {
-                Log.e("UserTierService", "Failed to send coins for user $userId upgrade")
-                return false
-            }
+                if (!paymentSuccess) {
+                    Log.e("UserTierService", "Failed to send coins for user $userId upgrade")
+                    return false
+                }
 
-            val currentTime = System.currentTimeMillis()
-            val validUntil =
-                durationMonths?.let {
+                // Wait a bit for the transaction to be processed
+                kotlinx.coroutines.delay(2000)
+
+                // Calculate validity period
+                val currentTime = System.currentTimeMillis()
+                val validUntil = durationMonths?.let {
                     currentTime + (it * 30L * 24L * 60L * 60L * 1000L) // Convert months to milliseconds
                 }
 
-            val block =
-                userTierBlockRepository.create(
+                // Create the tier block
+                Log.d("UserTierService", "Creating PRO tier block")
+                val block = userTierBlockRepository.create(
                     userId = userId,
                     tier = "PRO",
                     validFrom = currentTime,
                     validUntil = validUntil
                 )
 
-            if (block == null) {
-                Log.e("UserTierService", "Failed to create PRO tier block for user $userId")
-            } else {
-                Log.i("UserTierService", "Successfully upgraded user $userId to PRO tier")
-            }
+                if (block == null) {
+                    Log.e("UserTierService", "Failed to create PRO tier block for user $userId")
+                    return false
+                }
 
-            return block != null
+                Log.i("UserTierService", "Successfully upgraded user $userId to PRO tier")
+                return true
+            } catch (e: Exception) {
+                Log.e("UserTierService", "Error during upgrade process: ${e.message}")
+                e.printStackTrace()
+                return false
+            }
         }
 
         suspend fun downgradeToBasic(userId: String): Boolean {

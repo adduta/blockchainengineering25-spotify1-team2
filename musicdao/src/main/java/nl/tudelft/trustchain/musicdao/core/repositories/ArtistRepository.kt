@@ -16,7 +16,8 @@ class ArtistRepository
     constructor(
         private val artistAnnounceBlockRepository: ArtistAnnounceBlockRepository,
         private val albumRepository: AlbumRepository,
-        private val musicCommunity: MusicCommunity
+        private val musicCommunity: MusicCommunity,
+        private val releaseRepository: ReleaseRepository
     ) {
         val stateFlows: MutableMap<String, MutableStateFlow<Artist?>> = mutableMapOf()
 
@@ -29,7 +30,11 @@ class ArtistRepository
         }
 
         suspend fun getArtistReleases(publicKey: String): List<Album> {
-            return albumRepository.getAlbumsFromArtist(publicKey = publicKey)
+            val albums = albumRepository.getAlbumsFromArtist(publicKey = publicKey)
+            return albums.map { album ->
+                val magnetLink = releaseRepository.getFullRelease(album.id, publicKey)
+                album.copy(magnet = magnetLink ?: "access_restricted")
+            }
         }
 
         suspend fun getArtistStateFlow(publicKey: String): StateFlow<Artist?> {
