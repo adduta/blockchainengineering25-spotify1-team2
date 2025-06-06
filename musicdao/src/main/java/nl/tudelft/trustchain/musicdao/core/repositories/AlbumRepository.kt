@@ -15,6 +15,7 @@ import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.core.ipv8.UserTierVerifier
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.releasePublish.ReleasePublishBlock
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.releasePublish.ReleasePublishBlockRepository
+import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetResponseMessage
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
 import nl.tudelft.trustchain.musicdao.core.torrent.TorrentEngine
 import javax.inject.Inject
@@ -50,7 +51,7 @@ class AlbumRepository
         suspend fun getAlbums(userPublicKey: String, releaseRepository: ReleaseRepository): List<Album> {
             val albums = database.dao.getAll().map { it.toAlbum() }
             Log.d("AlbumRepository", "Found ${albums.size} albums in database")
-            
+
             // For each album, check if we need to request the magnet link
             for (album in albums) {
                 if (album.magnet == "access_restricted") {
@@ -184,21 +185,37 @@ class AlbumRepository
         suspend fun requestMagnetLink(releaseId: String) {
             try {
                 Log.d("AlbumRepository", "Requesting magnet link for release $releaseId from peers")
-                // Request magnet link from peers
-                val peersCount = musicCommunity.requestMagnetLink(releaseId)
-                Log.d("AlbumRepository", "Sent magnet link request to $peersCount peers for release $releaseId")
 
-                // Wait for response with timeout
-                val response = musicCommunity.getMagnetResponse()
+                // Try up to 3 times with increasing timeouts
+                val timeouts = listOf(5000L, 10000L, 15000L)
+                var response: MagnetResponseMessage? = null
+
+                for ((attempt, timeout) in timeouts.withIndex()) {
+                    Log.d("AlbumRepository", "Attempt ${attempt + 1} to get magnet link for release $releaseId with timeout ${timeout}ms")
+
+                    // Request magnet link from peers
+                    val peersCount = musicCommunity.requestMagnetLink(releaseId)
+                    Log.d("AlbumRepository", "Sent magnet link request to $peersCount peers for release $releaseId")
+
+                    // Wait for response with timeout
+                    response = musicCommunity.getMagnetResponse(timeout)
+
+                    if (response != null && response.magnetLink.isNotEmpty()) {
+                        Log.d("AlbumRepository", "Received magnet link for release $releaseId on attempt ${attempt + 1}")
+                        break
+                    } else {
+                        Log.d("AlbumRepository", "No magnet link response received for release $releaseId on attempt ${attempt + 1}")
+                    }
+                }
 
                 // If we got a valid response, update the local database
                 if (response != null && response.magnetLink.isNotEmpty()) {
-                    Log.d("AlbumRepository", "Received magnet link for release $releaseId, updating local database")
+                    Log.d("AlbumRepository", "Updating local database with magnet link for release $releaseId")
                     withContext(Dispatchers.IO) {
                         database.dao.updateReleaseMagnet(releaseId, response.magnetLink)
                     }
                 } else {
-                    Log.d("AlbumRepository", "No magnet link response received for release $releaseId")
+                    Log.d("AlbumRepository", "Failed to get magnet link for release $releaseId after all attempts")
                 }
             } catch (e: Exception) {
                 // Log error and continue

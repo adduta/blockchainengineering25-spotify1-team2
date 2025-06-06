@@ -51,6 +51,10 @@ class HomeScreenViewModel
                     val userPublicKey = musicCommunity.publicKeyHex()
                     log("Starting initialization with userPublicKey: $userPublicKey")
 
+                    // Set initial peer count
+                    _peerAmount.postValue(musicCommunity.getPeers().size)
+                    log("Initial peer count: ${musicCommunity.getPeers().size}")
+
                     // Set up the albums flow observer first
                     log("Setting up albums flow observer...")
                     val albumsFlow = albumRepository.getAlbumsFlow(userPublicKey)
@@ -89,12 +93,24 @@ class HomeScreenViewModel
                         }
                     }
 
-                    // Update LiveData values
+                    // Update LiveData values immediately
                     log("Updating LiveData values...")
                     _releases.postValue(initialAlbums)
                     _totalReleaseAmount.postValue(initialAlbums.size)
                     _peerAmount.postValue(musicCommunity.getPeers().size)
                     log("LiveData values updated - releases: ${_releases.value?.size}, total: ${_totalReleaseAmount.value}, peers: ${_peerAmount.value}")
+
+                    // Set up periodic peer count updates
+                    viewModelScope.launch {
+                        while (true) {
+                            kotlinx.coroutines.delay(5000) // Update every 5 seconds
+                            val currentPeers = musicCommunity.getPeers().size
+                            if (currentPeers != _peerAmount.value) {
+                                log("Peer count changed: ${_peerAmount.value} -> $currentPeers")
+                                _peerAmount.postValue(currentPeers)
+                            }
+                        }
+                    }
                 } catch (e: Exception) {
                     log("Error in initialization: ${e.message}")
                     e.printStackTrace()

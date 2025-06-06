@@ -12,8 +12,10 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.preference.PreferenceManager
+import androidx.room.Room
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import com.google.gson.Gson
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -62,6 +64,9 @@ import nl.tudelft.trustchain.common.eurotoken.TransactionRepository
 import nl.tudelft.trustchain.currencyii.CoinCommunity
 import nl.tudelft.trustchain.eurotoken.community.EuroTokenCommunity
 import nl.tudelft.trustchain.eurotoken.db.TrustStore
+import nl.tudelft.trustchain.musicdao.core.cache.CacheDatabase
+import nl.tudelft.trustchain.musicdao.core.cache.parser.Converters
+import nl.tudelft.trustchain.musicdao.core.cache.parser.GsonParser
 import nl.tudelft.trustchain.musicdao.core.dao.DaoCommunity
 import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.valuetransfer.community.IdentityCommunity
@@ -336,8 +341,19 @@ class TrustChainApplication : Application() {
         val driver = AndroidSqliteDriver(Database.Schema, this, "music-private.db")
         val store = TrustChainSQLiteStore(Database(driver))
         val randomWalk = RandomWalk.Factory()
+
+        // Create a temporary CacheDatabase instance for initialization
+        // This will be replaced by the proper instance from Hilt later
+        val tempCacheDatabase = Room.databaseBuilder(
+            applicationContext,
+            CacheDatabase::class.java,
+            "musicdao-database"
+        ).fallbackToDestructiveMigration()
+            .addTypeConverter(Converters(GsonParser(Gson())))
+            .build()
+
         return OverlayConfiguration(
-            MusicCommunity.Factory(settings, store),
+            MusicCommunity.Factory(settings, store, tempCacheDatabase),
             listOf(randomWalk)
         )
     }
