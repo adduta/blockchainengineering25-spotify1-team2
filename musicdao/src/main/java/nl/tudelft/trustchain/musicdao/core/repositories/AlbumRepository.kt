@@ -158,10 +158,8 @@ class AlbumRepository
                 // Request magnet link from peers
                 val peersCount = musicCommunity.requestMagnetLink(releaseId)
                 Log.d("AlbumRepository", "Sent magnet link request to $peersCount peers for release $releaseId")
-                
                 // Wait for response with timeout
                 val response = musicCommunity.getMagnetResponse()
-                
                 // If we got a valid response, update the local database
                 if (response != null && response.magnetLink.isNotEmpty()) {
                     Log.d("AlbumRepository", "Received magnet link for release $releaseId, updating local database")

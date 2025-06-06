@@ -20,7 +20,6 @@ class ReleaseRepository
 
             // Wait for response with timeout
             val response = musicCommunity.getMagnetResponse()
-            
             if (response != null && response.magnetLink.isNotEmpty()) {
                 Log.d("ReleaseRepository", "Received magnet link for release $releaseId")
             } else {
