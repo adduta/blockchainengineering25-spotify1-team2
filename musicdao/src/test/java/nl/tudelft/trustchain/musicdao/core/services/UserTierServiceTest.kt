@@ -8,6 +8,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.DisplayName
+import org.bitcoinj.core.Coin
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @DisplayName("UserTierService Tests")
 class UserTierServiceTest {
@@ -29,6 +31,8 @@ class UserTierServiceTest {
             // Arrange
             val userId = "testUser123"
             val durationMonths = 3
+            val sufficientBalance = Coin.parseCoin("0.2") // More than required 0.1 BTC
+            every { bitcoinWalletViewModel.confirmedBalance } returns MutableStateFlow(sufficientBalance)
             coEvery { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) } returns true
             coEvery {
                 userTierBlockRepository.create(
@@ -61,6 +65,8 @@ class UserTierServiceTest {
         runBlocking {
             // Arrange
             val userId = "testUser123"
+            val sufficientBalance = Coin.parseCoin("0.2") // More than required 0.1 BTC
+            every { bitcoinWalletViewModel.confirmedBalance } returns MutableStateFlow(sufficientBalance)
             coEvery { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) } returns false
 
             // Act
@@ -78,6 +84,8 @@ class UserTierServiceTest {
         runBlocking {
             // Arrange
             val userId = "testUser123"
+            val sufficientBalance = Coin.parseCoin("0.2") // More than required 0.1 BTC
+            every { bitcoinWalletViewModel.confirmedBalance } returns MutableStateFlow(sufficientBalance)
             coEvery { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) } returns true
             coEvery {
                 userTierBlockRepository.create(
@@ -102,6 +110,24 @@ class UserTierServiceTest {
                     validUntil = any()
                 )
             }
+        }
+
+    @Test
+    @DisplayName("Should fail to upgrade to PRO tier with insufficient balance")
+    fun `test upgradeToPro with insufficient balance`() =
+        runBlocking {
+            // Arrange
+            val userId = "testUser123"
+            val insufficientBalance = Coin.parseCoin("0.05") // Less than required 0.1 BTC
+            every { bitcoinWalletViewModel.confirmedBalance } returns MutableStateFlow(insufficientBalance)
+
+            // Act
+            val result = userTierService.upgradeToPro(userId, null, bitcoinWalletViewModel)
+
+            // Assert
+            assertFalse(result)
+            coVerify(exactly = 0) { bitcoinWalletViewModel.walletService.sendCoins(any(), any()) }
+            coVerify(exactly = 0) { userTierBlockRepository.create(any(), any(), any(), any()) }
         }
 
     @Test
