@@ -24,6 +24,8 @@ import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.runBlocking
 import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetRequestMessage
 import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetResponseMessage
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @Suppress("DEPRECATION")
 class MusicCommunity(
@@ -153,40 +155,51 @@ class MusicCommunity(
     private fun onMagnetRequest(packet: Packet) {
         val (peer, request) = packet.getAuthPayload(MagnetRequestMessage)
 
-        // Get the release from our local database
-        val release = runBlocking { albumRepository.getReleaseById(request.releaseId) }
+        // Launch a coroutine to handle the request asynchronously
+        GlobalScope.launch {
+            try {
+                // Get the release from our local database
+                val release = albumRepository.getReleaseById(request.releaseId)
+                
+                // Check if we have the release and its magnet link
+                if (release != null && release.magnet.isNotEmpty() && release.magnet != "access_restricted") {
+                    // If we have the release and its magnet link, send it back to the requesting peer
+                    val response = MagnetResponseMessage(
+                        releaseId = request.releaseId,
+                        magnetLink = release.magnet
+                    )
 
-        if (release != null && release.magnet.isNotEmpty() && release.magnet != "access_restricted") {
-            // If we have the release and its magnet link, send it back to the requesting peer
-            val response =
-                MagnetResponseMessage(
-                    releaseId = request.releaseId,
-                    magnetLink = release.magnet
-                )
+                    val responsePacket = serializePacket(
+                        MessageId.MAGNET_RESPONSE_MESSAGE,
+                        response
+                    )
 
-            val responsePacket =
-                serializePacket(
-                    MessageId.MAGNET_RESPONSE_MESSAGE,
-                    response
-                )
+                    send(peer, responsePacket)
+                    Log.d("MusicCommunity", "Sent magnet link for release ${request.releaseId} to peer ${peer.mid}")
+                } else {
+                    // If we don't have the release or its magnet link is restricted, forward the request to our peers
+                    if (!request.checkTTL()) {
+                        Log.d("MusicCommunity", "TTL expired for magnet request ${request.releaseId}")
+                        return@launch
+                    }
 
-            send(peer, responsePacket)
-        } else {
-            // If we don't have the release or its magnet link is restricted, forward the request to our peers
-            if (!request.checkTTL()) return
-
-            val peers = getPeers().filter { it != peer } // Don't send back to the requesting peer
-            for (otherPeer in peers) {
-                try {
-                    val forwardPacket =
-                        serializePacket(
-                            MessageId.MAGNET_REQUEST_MESSAGE,
-                            request
-                        )
-                    send(otherPeer, forwardPacket)
-                } catch (e: Exception) {
-                    // Log error and continue with other peers
+                    val peers = getPeers().filter { it != peer } // Don't send back to the requesting peer
+                    Log.d("MusicCommunity", "Forwarding magnet request for release ${request.releaseId} to ${peers.size} peers")
+                    
+                    for (otherPeer in peers) {
+                        try {
+                            val forwardPacket = serializePacket(
+                                MessageId.MAGNET_REQUEST_MESSAGE,
+                                request
+                            )
+                            send(otherPeer, forwardPacket)
+                        } catch (e: Exception) {
+                            Log.e("MusicCommunity", "Error forwarding magnet request: ${e.message}")
+                        }
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e("MusicCommunity", "Error handling magnet request: ${e.message}")
             }
         }
     }
