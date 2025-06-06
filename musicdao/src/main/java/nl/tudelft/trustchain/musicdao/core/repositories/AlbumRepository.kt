@@ -3,6 +3,7 @@ package nl.tudelft.trustchain.musicdao.core.repositories
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.map
+import com.turn.ttorrent.common.Torrent
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -49,11 +50,11 @@ class AlbumRepository
         }
 
         suspend fun getAlbums(userPublicKey: String, releaseRepository: ReleaseRepository): List<Album> {
-            val albums = database.dao.getAll().map { it.toAlbum() }
-            Log.d("AlbumRepository", "Found ${albums.size} albums in database")
+            val albumEntities = database.dao.getAll()
+            Log.d("AlbumRepository", "Found ${albumEntities.size} albums in database")
 
             // For each album, check if we need to request the magnet link
-            for (album in albums) {
+            for (album in albumEntities) {
                 if (album.magnet == "access_restricted") {
                     Log.d("AlbumRepository", "Found album with access_restricted magnet, requesting magnet link")
                     requestMagnetLink(album.id)
@@ -61,11 +62,19 @@ class AlbumRepository
                     Log.d("AlbumRepository", "Found album without magnet link, requesting magnet link")
                     requestMagnetLink(album.id)
                 } else {
-                    Log.d("AlbumRepository", "Found existing magnet link for album ${album.id}")
+                    Log.d("AlbumRepository", "Found existing magnet link for album ${album.id}: ${album.magnet}")
+                    if (album.infoHash.isNullOrBlank() && album.magnet.isNotEmpty()) {
+                        Log.d("AlbumRepository", "For album ${album.id}, the magnet link was set, but the info has was not set. So, the infoHash will now be persisted.")
+                    }
+                    val infoHash: String = TorrentEngine.magnetToInfoHash(album.magnet) ?: ""
+                    withContext(Dispatchers.IO) {
+                        database.dao.updateReleaseMagnet(album.id, album.magnet, infoHash)
+                    }
                 }
             }
 
-            // Filter albums based on user tier
+            // Filter albums based on user tier.
+            val albums = albumEntities.map { it.toAlbum() }
             return albums.filter { album ->
                 if (album.magnet == "access_restricted") {
                     // Check if user is PRO
@@ -188,6 +197,7 @@ class AlbumRepository
 
                 // Try up to 3 times with increasing timeouts
                 val timeouts = listOf(5000L, 10000L, 15000L)
+
                 var response: MagnetResponseMessage? = null
 
                 for ((attempt, timeout) in timeouts.withIndex()) {
@@ -211,8 +221,9 @@ class AlbumRepository
                 // If we got a valid response, update the local database
                 if (response != null && response.magnetLink.isNotEmpty()) {
                     Log.d("AlbumRepository", "Updating local database with magnet link for release $releaseId")
+                    val infoHash: String = TorrentEngine.magnetToInfoHash(response.magnetLink) ?: ""
                     withContext(Dispatchers.IO) {
-                        database.dao.updateReleaseMagnet(releaseId, response.magnetLink)
+                        database.dao.updateReleaseMagnet(releaseId, response.magnetLink, infoHash)
                     }
                 } else {
                     Log.d("AlbumRepository", "Failed to get magnet link for release $releaseId after all attempts")
@@ -272,13 +283,5 @@ class AlbumRepository
             database.dao.getAll()
             // Log the refresh for debugging
             Log.d("AlbumRepository", "Cache refreshed with ${releaseBlocks.size} releases")
-        }
-
-        suspend fun updateReleaseMagnet(
-            releaseId: String,
-            magnetLink: String
-        ) {
-            Log.d("AlbumRepository", "Updating magnet link for release $releaseId")
-            database.dao.updateReleaseMagnet(releaseId, magnetLink)
         }
     }

@@ -36,9 +36,10 @@ interface CacheDao {
     @Query("SELECT * FROM AlbumEntity WHERE artist LIKE '%' || :keyword || '%' OR title LIKE '%' || :keyword || '%'")
     suspend fun localSearch(keyword: String): List<AlbumEntity>
 
-    @Query("UPDATE AlbumEntity SET magnet = :magnetLink WHERE id = :releaseId")
+    @Query("UPDATE AlbumEntity SET magnet = :magnetLink, infoHash = :infoHash WHERE id = :releaseId")
     suspend fun updateReleaseMagnet(
         releaseId: String,
-        magnetLink: String
+        magnetLink: String,
+        infoHash: String
     )
 }
