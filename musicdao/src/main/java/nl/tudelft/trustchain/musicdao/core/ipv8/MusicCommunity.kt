@@ -17,13 +17,13 @@ import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.util.hexToBytes
 import nl.tudelft.ipv8.util.toHex
 import java.util.*
-import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MessageId
-import nl.tudelft.trustchain.musicdao.core.ipv8.messages.ReleaseRequestMessage
-import nl.tudelft.trustchain.musicdao.core.ipv8.messages.ReleaseResponseMessage
 import nl.tudelft.trustchain.musicdao.core.repositories.AlbumRepository
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import kotlinx.coroutines.runBlocking
+import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetRequestMessage
+import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetResponseMessage
 
 @Suppress("DEPRECATION")
 class MusicCommunity(
@@ -38,8 +38,8 @@ class MusicCommunity(
     @Inject
     lateinit var albumRepository: AlbumRepository
 
-    // Channel to handle release responses
-    private val releaseResponseChannel = Channel<ReleaseResponseMessage>(UNLIMITED)
+    // Channel to handle magnet responses
+    private val magnetResponseChannel = Channel<MagnetResponseMessage>(UNLIMITED)
 
     class Factory(
         private val settings: TrustChainSettings,
@@ -54,8 +54,8 @@ class MusicCommunity(
     init {
         messageHandlers[MessageId.KEYWORD_SEARCH_MESSAGE] = ::onKeywordSearch
         messageHandlers[MessageId.SWARM_HEALTH_MESSAGE] = ::onSwarmHealth
-        messageHandlers[MessageId.RELEASE_REQUEST_MESSAGE] = ::onReleaseRequest
-        messageHandlers[MessageId.RELEASE_RESPONSE_MESSAGE] = ::onReleaseResponse
+        messageHandlers[MessageId.MAGNET_REQUEST_MESSAGE] = ::onMagnetRequest
+        messageHandlers[MessageId.MAGNET_RESPONSE_MESSAGE] = ::onMagnetResponse
     }
 
     fun performRemoteKeywordSearch(
@@ -150,34 +150,39 @@ class MusicCommunity(
         return publicKeyStringToPublicKey(publicKey).keyToBin()
     }
 
-    private fun onReleaseRequest(packet: Packet) {
-        val (peer, request) = packet.getAuthPayload(ReleaseRequestMessage)
-        
+    private fun onMagnetRequest(packet: Packet) {
+        val (peer, request) = packet.getAuthPayload(MagnetRequestMessage)
+
         // Get the release from our local database
-        val release = albumRepository.getReleaseById(request.releaseId)
-        
-        if (release != null && release.magnet.isNotEmpty()) {
+        val release = runBlocking { albumRepository.getReleaseById(request.releaseId) }
+
+        if (release != null && release.magnet.isNotEmpty() && release.magnet != "access_restricted") {
             // If we have the release and its magnet link, send it back to the requesting peer
-            val response = ReleaseResponseMessage(
-                releaseId = request.releaseId,
-                magnetLink = release.magnet
-            )
-            
-            val responsePacket = serializePacket(
-                MessageId.RELEASE_RESPONSE_MESSAGE,
-                response
-            )
-            
+            val response =
+                MagnetResponseMessage(
+                    releaseId = request.releaseId,
+                    magnetLink = release.magnet
+                )
+
+            val responsePacket =
+                serializePacket(
+                    MessageId.MAGNET_RESPONSE_MESSAGE,
+                    response
+                )
+
             send(peer, responsePacket)
         } else {
-            // If we don't have the release, forward the request to our peers
+            // If we don't have the release or its magnet link is restricted, forward the request to our peers
+            if (!request.checkTTL()) return
+
             val peers = getPeers().filter { it != peer } // Don't send back to the requesting peer
             for (otherPeer in peers) {
                 try {
-                    val forwardPacket = serializePacket(
-                        MessageId.RELEASE_REQUEST_MESSAGE,
-                        request
-                    )
+                    val forwardPacket =
+                        serializePacket(
+                            MessageId.MAGNET_REQUEST_MESSAGE,
+                            request
+                        )
                     send(otherPeer, forwardPacket)
                 } catch (e: Exception) {
                     // Log error and continue with other peers
@@ -186,27 +191,47 @@ class MusicCommunity(
         }
     }
 
-    private fun onReleaseResponse(packet: Packet) {
-        val (_, response) = packet.getAuthPayload(ReleaseResponseMessage)
+    private fun onMagnetResponse(packet: Packet) {
+        val (_, response) = packet.getAuthPayload(MagnetResponseMessage)
         // Send the response to the channel
-        releaseResponseChannel.trySend(response)
+        magnetResponseChannel.trySend(response)
     }
 
-    // Function to get a response from the channel with timeout
-    suspend fun getReleaseResponse(timeoutMillis: Long = 5000): ReleaseResponseMessage? {
+    // Function to get a magnet response from the channel with timeout
+    suspend fun getMagnetResponse(timeoutMillis: Long = 5000): MagnetResponseMessage? {
         return try {
             kotlinx.coroutines.withTimeout(timeoutMillis) {
-                releaseResponseChannel.receive()
+                magnetResponseChannel.receive()
             }
         } catch (e: Exception) {
             null
         }
     }
 
+    // Function to request a magnet link from peers
+    fun requestMagnetLink(
+        releaseId: String,
+        ttl: UInt = 3u
+    ): Int {
+        val maxPeersToAsk = 20 // This is a magic number, tweak during/after experiments
+        var count = 0
+        for ((index, peer) in getPeers().withIndex()) {
+            if (index >= maxPeersToAsk) break
+            val packet =
+                serializePacket(
+                    MessageId.MAGNET_REQUEST_MESSAGE,
+                    MagnetRequestMessage(myPeer.publicKey.keyToBin(), ttl, releaseId)
+                )
+            send(peer, packet)
+            count += 1
+        }
+        return count
+    }
+
     object MessageId {
         const val KEYWORD_SEARCH_MESSAGE = 10
         const val SWARM_HEALTH_MESSAGE = 11
-        const val RELEASE_REQUEST_MESSAGE = 12
-        const val RELEASE_RESPONSE_MESSAGE = 13
+        const val MAGNET_REQUEST_MESSAGE = 14
+        const val MAGNET_RESPONSE_MESSAGE = 15
     }
 }

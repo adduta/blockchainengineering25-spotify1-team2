@@ -5,9 +5,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.map
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.tudelft.trustchain.musicdao.core.cache.CacheDatabase
 import nl.tudelft.trustchain.musicdao.core.cache.entities.AlbumEntity
+import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.releasePublish.ReleasePublishBlock
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.releasePublish.ReleasePublishBlockRepository
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
@@ -22,10 +25,19 @@ class AlbumRepository
     @Inject
     constructor(
         private val database: CacheDatabase,
-        private val releasePublishBlockRepository: ReleasePublishBlockRepository
+        private val releasePublishBlockRepository: ReleasePublishBlockRepository,
+        private val musicCommunity: MusicCommunity
     ) {
         suspend fun getReleaseById(releaseId: String): Album? {
-            return database.dao.get(releaseId)?.toAlbum()
+            val album = database.dao.get(releaseId)?.toAlbum()
+            if (album != null && album.magnet.isEmpty()) {
+                Log.d("AlbumRepository", "No magnet link found for release $releaseId, requesting from peers")
+                // If we don't have the magnet link, request it from peers
+                requestMagnetLink(releaseId)
+            } else if (album != null) {
+                Log.d("AlbumRepository", "Found existing magnet link for release $releaseId")
+            }
+            return album
         }
 
         suspend fun getAlbums(
@@ -34,7 +46,16 @@ class AlbumRepository
         ): List<Album> {
             return withContext(Dispatchers.IO) {
                 database.dao.getAll().map { entity ->
-                    val magnetLink = releaseRepository.getFullRelease(entity.id, userPublicKey)
+                    val magnetLink =
+                        if (entity.magnet.isEmpty()) {
+                            Log.d("AlbumRepository", "No magnet link found for release ${entity.id}, requesting from peers")
+                            // If we don't have the magnet link, request it from peers
+                            requestMagnetLink(entity.id)
+                            null // Return null for now, it will be updated when we get the response
+                        } else {
+                            Log.d("AlbumRepository", "Found existing magnet link for release ${entity.id}")
+                            releaseRepository.getFullRelease(entity.id, userPublicKey)
+                        }
                     entity.toAlbum().copy(
                         magnet = magnetLink ?: "access_restricted"
                     )
@@ -46,6 +67,15 @@ class AlbumRepository
             return database.dao.getAllLiveData().map { entities ->
                 entities.map { entity ->
                     // Note: This is called from a non-suspend context, so we can't use getFullRelease here
+                    if (entity.magnet.isEmpty()) {
+                        Log.d("AlbumRepository", "No magnet link found for release ${entity.id}, requesting from peers in background")
+                        // Request magnet link in background
+                        GlobalScope.launch {
+                            requestMagnetLink(entity.id)
+                        }
+                    } else {
+                        Log.d("AlbumRepository", "Found existing magnet link for release ${entity.id}")
+                    }
                     entity.toAlbum().copy(
                         magnet = "access_restricted"
                     )
@@ -122,6 +152,29 @@ class AlbumRepository
             }
         }
 
+        private suspend fun requestMagnetLink(releaseId: String) {
+            try {
+                Log.d("AlbumRepository", "Requesting magnet link for release $releaseId from peers")
+                // Request magnet link from peers
+                val peersCount = musicCommunity.requestMagnetLink(releaseId)
+                Log.d("AlbumRepository", "Sent magnet link request to $peersCount peers for release $releaseId")
+                
+                // Wait for response with timeout
+                val response = musicCommunity.getMagnetResponse()
+                
+                // If we got a valid response, update the local database
+                if (response != null && response.magnetLink.isNotEmpty()) {
+                    Log.d("AlbumRepository", "Received magnet link for release $releaseId, updating local database")
+                    database.dao.updateReleaseMagnet(releaseId, response.magnetLink)
+                } else {
+                    Log.d("AlbumRepository", "No magnet link response received for release $releaseId")
+                }
+            } catch (e: Exception) {
+                // Log error and continue
+                Log.e("AlbumRepository", "Error requesting magnet link for release $releaseId: ${e.message}")
+            }
+        }
+
         @OptIn(DelicateCoroutinesApi::class)
         suspend fun refreshCache() {
             val releaseBlocks = releasePublishBlockRepository.getValidBlocks()
@@ -173,7 +226,11 @@ class AlbumRepository
             Log.d("AlbumRepository", "Cache refreshed with ${releaseBlocks.size} releases")
         }
 
-        suspend fun updateReleaseMagnet(releaseId: String, magnetLink: String) {
+        suspend fun updateReleaseMagnet(
+            releaseId: String,
+            magnetLink: String
+        ) {
+            Log.d("AlbumRepository", "Updating magnet link for release $releaseId")
             database.dao.updateReleaseMagnet(releaseId, magnetLink)
         }
     }

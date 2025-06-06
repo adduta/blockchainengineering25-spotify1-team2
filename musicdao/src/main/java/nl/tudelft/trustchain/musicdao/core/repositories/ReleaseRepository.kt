@@ -1,25 +1,32 @@
 package nl.tudelft.trustchain.musicdao.core.repositories
 
-import nl.tudelft.trustchain.musicdao.core.ipv8.ReleaseRequestHandler
-import nl.tudelft.trustchain.musicdao.core.ipv8.messages.ReleaseRequestMessage
+import android.util.Log
+import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import javax.inject.Inject
 
 class ReleaseRepository
     @Inject
     constructor(
-        private val releaseRequestHandler: ReleaseRequestHandler
+        private val musicCommunity: MusicCommunity
     ) {
         suspend fun getFullRelease(
             releaseId: String,
             userPublicKey: String
         ): String? {
-            val request =
-                ReleaseRequestMessage(
-                    releaseId = releaseId,
-                    userPublicKey = userPublicKey
-                )
+            Log.d("ReleaseRepository", "Requesting magnet link for release $releaseId")
+            // Request magnet link from peers
+            val peersCount = musicCommunity.requestMagnetLink(releaseId)
+            Log.d("ReleaseRepository", "Sent magnet link request to $peersCount peers for release $releaseId")
 
-            val response = releaseRequestHandler.handleRequest(request)
-            return response.magnetLink
+            // Wait for response with timeout
+            val response = musicCommunity.getMagnetResponse()
+            
+            if (response != null && response.magnetLink.isNotEmpty()) {
+                Log.d("ReleaseRepository", "Received magnet link for release $releaseId")
+            } else {
+                Log.d("ReleaseRepository", "No magnet link response received for release $releaseId")
+            }
+
+            return response?.magnetLink
         }
     }
