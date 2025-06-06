@@ -34,10 +34,11 @@ class UserTierService
 
                 // Send payment
                 Log.d("UserTierService", "Sending payment of 0.1 BTC")
-                val paymentSuccess = bitcoinWalletViewModel.walletService.sendCoins(
-                    "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
-                    "0.1"
-                )
+                val paymentSuccess =
+                    bitcoinWalletViewModel.walletService.sendCoins(
+                        "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
+                        "0.1"
+                    )
 
                 if (!paymentSuccess) {
                     Log.e("UserTierService", "Failed to send coins for user $userId upgrade")
@@ -49,18 +50,20 @@ class UserTierService
 
                 // Calculate validity period
                 val currentTime = System.currentTimeMillis()
-                val validUntil = durationMonths?.let {
-                    currentTime + (it * 30L * 24L * 60L * 60L * 1000L) // Convert months to milliseconds
-                }
+                val validUntil =
+                    durationMonths?.let {
+                        currentTime + (it * 30L * 24L * 60L * 60L * 1000L) // Convert months to milliseconds
+                    }
 
                 // Create the tier block
                 Log.d("UserTierService", "Creating PRO tier block")
-                val block = userTierBlockRepository.create(
-                    userId = userId,
-                    tier = "PRO",
-                    validFrom = currentTime,
-                    validUntil = validUntil
-                )
+                val block =
+                    userTierBlockRepository.create(
+                        userId = userId,
+                        tier = "PRO",
+                        validFrom = currentTime,
+                        validUntil = validUntil
+                    )
 
                 if (block == null) {
                     Log.e("UserTierService", "Failed to create PRO tier block for user $userId")
