@@ -17,6 +17,13 @@ import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.util.hexToBytes
 import nl.tudelft.ipv8.util.toHex
 import java.util.*
+import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MessageId
+import nl.tudelft.trustchain.musicdao.core.ipv8.messages.ReleaseRequestMessage
+import nl.tudelft.trustchain.musicdao.core.ipv8.messages.ReleaseResponseMessage
+import nl.tudelft.trustchain.musicdao.core.repositories.AlbumRepository
+import javax.inject.Inject
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 
 @Suppress("DEPRECATION")
 class MusicCommunity(
@@ -27,6 +34,12 @@ class MusicCommunity(
     override val serviceId = "29384902d2938f34872398758cf7ca9238ccc333"
     var swarmHealthMap = mutableMapOf<Sha1Hash, SwarmHealth>() // All recent swarm health data that
     // has been received from peers
+
+    @Inject
+    lateinit var albumRepository: AlbumRepository
+
+    // Channel to handle release responses
+    private val releaseResponseChannel = Channel<ReleaseResponseMessage>(UNLIMITED)
 
     class Factory(
         private val settings: TrustChainSettings,
@@ -41,6 +54,8 @@ class MusicCommunity(
     init {
         messageHandlers[MessageId.KEYWORD_SEARCH_MESSAGE] = ::onKeywordSearch
         messageHandlers[MessageId.SWARM_HEALTH_MESSAGE] = ::onSwarmHealth
+        messageHandlers[MessageId.RELEASE_REQUEST_MESSAGE] = ::onReleaseRequest
+        messageHandlers[MessageId.RELEASE_RESPONSE_MESSAGE] = ::onReleaseResponse
     }
 
     fun performRemoteKeywordSearch(
@@ -135,8 +150,63 @@ class MusicCommunity(
         return publicKeyStringToPublicKey(publicKey).keyToBin()
     }
 
+    private fun onReleaseRequest(packet: Packet) {
+        val (peer, request) = packet.getAuthPayload(ReleaseRequestMessage)
+        
+        // Get the release from our local database
+        val release = albumRepository.getReleaseById(request.releaseId)
+        
+        if (release != null && release.magnet.isNotEmpty()) {
+            // If we have the release and its magnet link, send it back to the requesting peer
+            val response = ReleaseResponseMessage(
+                releaseId = request.releaseId,
+                magnetLink = release.magnet
+            )
+            
+            val responsePacket = serializePacket(
+                MessageId.RELEASE_RESPONSE_MESSAGE,
+                response
+            )
+            
+            send(peer, responsePacket)
+        } else {
+            // If we don't have the release, forward the request to our peers
+            val peers = getPeers().filter { it != peer } // Don't send back to the requesting peer
+            for (otherPeer in peers) {
+                try {
+                    val forwardPacket = serializePacket(
+                        MessageId.RELEASE_REQUEST_MESSAGE,
+                        request
+                    )
+                    send(otherPeer, forwardPacket)
+                } catch (e: Exception) {
+                    // Log error and continue with other peers
+                }
+            }
+        }
+    }
+
+    private fun onReleaseResponse(packet: Packet) {
+        val (_, response) = packet.getAuthPayload(ReleaseResponseMessage)
+        // Send the response to the channel
+        releaseResponseChannel.trySend(response)
+    }
+
+    // Function to get a response from the channel with timeout
+    suspend fun getReleaseResponse(timeoutMillis: Long = 5000): ReleaseResponseMessage? {
+        return try {
+            kotlinx.coroutines.withTimeout(timeoutMillis) {
+                releaseResponseChannel.receive()
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     object MessageId {
         const val KEYWORD_SEARCH_MESSAGE = 10
         const val SWARM_HEALTH_MESSAGE = 11
+        const val RELEASE_REQUEST_MESSAGE = 12
+        const val RELEASE_RESPONSE_MESSAGE = 13
     }
 }

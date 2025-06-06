@@ -172,4 +172,8 @@ class AlbumRepository
             // Log the refresh for debugging
             Log.d("AlbumRepository", "Cache refreshed with ${releaseBlocks.size} releases")
         }
+
+        suspend fun updateReleaseMagnet(releaseId: String, magnetLink: String) {
+            database.dao.updateReleaseMagnet(releaseId, magnetLink)
+        }
     }
