@@ -232,7 +232,7 @@ fun ReleaseScreen(
                                 text =
                                     when (viewModel.accessReason.collectAsState().value) {
                                         ReleaseScreenViewModel.AccessReason.RESTRICTED -> "This release is currently restricted"
-                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "This release is no longer available"
+                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "This release is not available"
                                         ReleaseScreenViewModel.AccessReason.DOWNLOADING -> "Downloading release..."
                                         ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
                                         null -> "Release not available for download"
@@ -250,7 +250,7 @@ fun ReleaseScreen(
                                                 "or wait for the release period to end"
                                         ReleaseScreenViewModel.AccessReason.NO_MAGNET ->
                                             "" +
-                                                "The artist may have removed this release"
+                                                "The artist may have removed this release or the magnet link for it could not be retrieved."
                                         ReleaseScreenViewModel.AccessReason.DOWNLOADING ->
                                             "" +
                                                 "Please wait while we download the release"
