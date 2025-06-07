@@ -215,7 +215,12 @@ fun ReleaseScreen(
                 if (current != null) {
                     TorrentStatusScreen(current)
                 } else {
-                    if (albumState?.magnet == "access_restricted") {
+                    // TODO: Is this if statement needed? I guess that in case the magnet is
+                    //  available (together with the infoHash), then `torrentStatus` will be
+                    //  non-null, thus the execution flow will not go through this branch at all.
+                    //  Therefore, no rendering will ever be done based on the DOWNLOADING and
+                    //  DOWNLOAD_ERROR states.
+                    if (!albumState?.magnet?.contains("magnet")!!) {
                         Column(
                             modifier =
                                 Modifier

@@ -56,19 +56,39 @@ class AlbumRepository
             // For each album, check if we need to request the magnet link
             for (album in albumEntities) {
                 if (album.magnet == "access_restricted") {
-                    Log.d("AlbumRepository", "Found album with access_restricted magnet, requesting magnet link")
-                    requestMagnetLink(album.id)
+                    Log.d("AlbumRepository", "Found album ${album.id} with access_restricted magnet, requesting magnet link")
+                    val magnetLink = requestMagnetLink(album.id)
+                    // If user upgraded to a PRO account, but the user could not get the magnet link
+                    // for this specific album from none of the peers, then `album.magnet` should be
+                    // set to an empty string, rather than keeping it to
+                    // `access_restricted`. This way, when trying to display the torrent for such a
+                    // release, it can be displayed that the torrent could not be fetched.
+                    if (userTierVerifier.isProUser(userPublicKey.hexToBytes()) && magnetLink.isNullOrEmpty()) {
+                        withContext(Dispatchers.IO) {
+                            database.dao.updateReleaseMagnet(album.id, "", "")
+                        }
+                    }
                 } else if (album.magnet.isEmpty()) {
-                    Log.d("AlbumRepository", "Found album without magnet link, requesting magnet link")
-                    requestMagnetLink(album.id)
+                    Log.d("AlbumRepository", "Found album ${album.id} without magnet link, requesting magnet link")
+                    val magnetLink = requestMagnetLink(album.id)
+                    // If user upgraded to a PRO account, but the user could not get the magnet link
+                    // for this specific album from none of the peers, then `album.magnet` should be
+                    // set to an empty string, rather than keeping it to
+                    // `access_restricted`. This way, when trying to display the torrent for such a
+                    // release, it can be displayed that the torrent could not be fetched.
+                    if (userTierVerifier.isProUser(userPublicKey.hexToBytes()) && magnetLink.isNullOrEmpty()) {
+                        withContext(Dispatchers.IO) {
+                            database.dao.updateReleaseMagnet(album.id, "", "")
+                        }
+                    }
                 } else {
                     Log.d("AlbumRepository", "Found existing magnet link for album ${album.id}: ${album.magnet}")
-                    if (album.infoHash.isNullOrBlank() && album.magnet.isNotEmpty()) {
+                    if (album.infoHash.isNullOrEmpty() && album.magnet.isNotEmpty()) {
                         Log.d("AlbumRepository", "For album ${album.id}, the magnet link was set, but the info has was not set. So, the infoHash will now be persisted.")
-                    }
-                    val infoHash: String = TorrentEngine.magnetToInfoHash(album.magnet) ?: ""
-                    withContext(Dispatchers.IO) {
-                        database.dao.updateReleaseMagnet(album.id, album.magnet, infoHash)
+                        val infoHash: String = TorrentEngine.magnetToInfoHash(album.magnet) ?: ""
+                        withContext(Dispatchers.IO) {
+                            database.dao.updateReleaseMagnet(album.id, album.magnet, infoHash)
+                        }
                     }
                 }
             }
@@ -191,7 +211,7 @@ class AlbumRepository
             }
         }
 
-        suspend fun requestMagnetLink(releaseId: String) {
+        suspend fun requestMagnetLink(releaseId: String): String? {
             try {
                 Log.d("AlbumRepository", "Requesting magnet link for release $releaseId from peers")
 
@@ -225,6 +245,7 @@ class AlbumRepository
                     withContext(Dispatchers.IO) {
                         database.dao.updateReleaseMagnet(releaseId, response.magnetLink, infoHash)
                     }
+                    return response.magnetLink
                 } else {
                     Log.d("AlbumRepository", "Failed to get magnet link for release $releaseId after all attempts")
                 }
@@ -232,6 +253,7 @@ class AlbumRepository
                 // Log error and continue
                 Log.e("AlbumRepository", "Error requesting magnet link for release $releaseId: ${e.message}")
             }
+            return null
         }
 
         @OptIn(DelicateCoroutinesApi::class)
