@@ -115,16 +115,7 @@ class AlbumRepository
 
             // Filter albums based on user tier and release date
             val albums = albumEntities.map { it.toAlbum() }
-            return albums.filter { album ->
-                if (album.magnet == "access_restricted") {
-                    val isPro = userTierVerifier.isProUser(userPublicKey.hexToBytes())
-                    val isPastDelay = isReleasePastDelayPeriod(album.releaseDate.toString())
-                    Log.d("AlbumRepository", "Album ${album.id} is access_restricted, user is PRO: $isPro, past delay: $isPastDelay")
-                    isPro || isPastDelay
-                } else {
-                    true
-                }
-            }
+            return albums
         }
 
         fun getAlbumsFlow(userPublicKey: String): LiveData<List<Album>> {
