@@ -37,7 +37,7 @@ interface CacheDao {
     suspend fun localSearch(keyword: String): List<AlbumEntity>
 
     @Query("UPDATE AlbumEntity SET magnet = :magnetLink, infoHash = :infoHash WHERE id = :releaseId")
-    suspend fun updateReleaseMagnet(
+    fun updateReleaseMagnet(
         releaseId: String,
         magnetLink: String,
         infoHash: String

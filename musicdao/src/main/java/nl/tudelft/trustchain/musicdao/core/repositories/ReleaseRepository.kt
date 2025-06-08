@@ -5,6 +5,7 @@ import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetResponseMessage
 import javax.inject.Inject
 
+@Deprecated("DO NOT USE")
 class ReleaseRepository
     @Inject
     constructor(

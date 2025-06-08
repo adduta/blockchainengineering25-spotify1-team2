@@ -77,32 +77,8 @@ class ReleaseScreenViewModel
                                 val releaseDate = Instant.parse(_release.releaseDate)
                                 val sevenDaysAgo = Instant.now().minus(7, ChronoUnit.DAYS)
 
-                                if (isPro) {
+                                if (isPro || releaseDate.isBefore(sevenDaysAgo)) {
                                     // Pro users can access immediately
-                                    try {
-                                        val magnetLink = albumRepository.requestMagnetLink(_release.id)
-                                        if (magnetLink != null) {
-                                            val infoHash = TorrentEngine.magnetToInfoHash(magnetLink)
-
-                                            if (infoHash != null) {
-                                                // Update magnet and infoHash in the database
-                                                database.dao.updateReleaseMagnet(
-                                                    _release.id,
-                                                    magnetLink,
-                                                    infoHash
-                                                )
-                                                AccessReason.DOWNLOADING
-                                            } else {
-                                                AccessReason.NO_MAGNET
-                                            }
-                                        } else {
-                                            AccessReason.NO_MAGNET
-                                        }
-                                    } catch (e: Exception) {
-                                        AccessReason.DOWNLOAD_ERROR
-                                    }
-                                } else if (releaseDate.isBefore(sevenDaysAgo)) {
-                                    // Basic users can access after 7 days
                                     try {
                                         val magnetLink = albumRepository.requestMagnetLink(_release.id)
                                         if (magnetLink != null) {

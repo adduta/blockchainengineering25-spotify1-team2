@@ -5,6 +5,7 @@ import android.util.Log
 import nl.tudelft.trustchain.musicdao.core.ipv8.modules.search.KeywordSearchMessage
 import com.frostwire.jlibtorrent.Sha1Hash
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
@@ -24,7 +25,9 @@ import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetRequestMessage
 import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetResponseMessage
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nl.tudelft.trustchain.musicdao.core.cache.CacheDatabase
+import nl.tudelft.trustchain.musicdao.core.torrent.TorrentEngine
 
 @Suppress("DEPRECATION")
 class MusicCommunity(
@@ -210,10 +213,10 @@ class MusicCommunity(
 
     private fun onMagnetResponse(packet: Packet) {
         val (peer, response) = packet.getAuthPayload(MagnetResponseMessage)
-        Log.d("MusicCommunity", "Received magnet response for release ${response.releaseId} from peer ${peer.mid}")
-        // Send the response to the channel
-        magnetResponseChannel.trySend(response)
-        Log.d("MusicCommunity", "Added magnet response to channel for release ${response.releaseId}")
+        Log.d("MusicCommunity", "For release ${response.releaseId}, magnet link ${response.magnetLink} was received from peer ${peer.mid}")
+        // Persist the received magnet link in the database.
+        val infoHash: String = TorrentEngine.magnetToInfoHash(response.magnetLink) ?: ""
+        cacheDatabase.dao.updateReleaseMagnet(response.releaseId, response.magnetLink, infoHash)
     }
 
     // Function to get a magnet response from the channel with timeout

@@ -30,11 +30,7 @@ class ArtistRepository
         }
 
         suspend fun getArtistReleases(publicKey: String): List<Album> {
-            val albums = albumRepository.getAlbumsFromArtist(publicKey = publicKey)
-            return albums.map { album ->
-                val magnetLink = releaseRepository.getFullRelease(album.id, publicKey)
-                album.copy(magnet = magnetLink ?: "access_restricted")
-            }
+            return albumRepository.getAlbumsFromArtist(publicKey = publicKey)
         }
 
         suspend fun getArtistStateFlow(publicKey: String): StateFlow<Artist?> {
