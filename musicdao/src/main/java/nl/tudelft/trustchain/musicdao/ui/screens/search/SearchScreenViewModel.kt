@@ -3,7 +3,6 @@ package nl.tudelft.trustchain.musicdao.ui.screens.search
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.core.repositories.AlbumRepository
@@ -45,29 +44,22 @@ class SearchScreenViewModel
         init {
             viewModelScope.launch {
                 val userPublicKey = musicCommunity.publicKeyHex()
-                val albums = albumRepository.getAlbums(userPublicKey, releaseRepository)
-                android.util.Log.d("SearchScreenViewModel", "Initial search: ${albums.size} albums")
-                albums.forEach { album ->
-                    android.util.Log.d("SearchScreenViewModel", "Initial album: id=${album.id}, magnet=${album.magnet}")
-                }
+                // 1. Fetch albums only from cache for instant UI update
+                var albums = albumRepository.getAlbumsFromCache(userPublicKey)
                 _searchResult.value = downloadedFirstInListOfAlbums(albums)
                 _peerAmount.value = musicCommunity.getPeers().size
                 _totalReleaseAmount.value = albums.size
-                android.util.Log.d("SearchScreenViewModel", "Initial peerAmount: ${_peerAmount.value}, totalReleaseAmount: ${_totalReleaseAmount.value}")
+                // 2. In the background, refresh magnet links (do not block UI)
+                refreshMagnetLinks(albums)
 
-                // Observe the albums flow for updates
-                albumRepository.getAlbumsFlow(userPublicKey).map { x ->
-                    android.util.Log.d("SearchScreenViewModel", "AlbumsFlow update: ${x.size} albums")
-                    x.forEach { album ->
-                        android.util.Log.d("SearchScreenViewModel", "Flow album: id=${album.id}, magnet=${album.magnet}")
-                    }
-                    if (_searchQuery.value.isEmpty()) {
-                        _searchResult.value = downloadedFirstInListOfAlbums(albums)
-                        _totalReleaseAmount.value = albums.size
-                        _peerAmount.value = musicCommunity.getPeers().size
-                        android.util.Log.d("SearchScreenViewModel", "Updated peerAmount: ${_peerAmount.value}, totalReleaseAmount: ${_totalReleaseAmount.value}")
-                    }
-                }
+                // 3. Immediately refresh the cache (fetch from network)
+                albumRepository.refreshCache()
+                // 4. Fetch albums again after cache refresh
+                albums = albumRepository.getAlbums(userPublicKey, releaseRepository)
+                _searchResult.value = downloadedFirstInListOfAlbums(albums)
+                _totalReleaseAmount.value = albums.size
+                // 5. In the background, refresh magnet links for new albums
+                refreshMagnetLinks(albums)
             }
         }
 
@@ -95,18 +87,12 @@ class SearchScreenViewModel
             val userPublicKey = musicCommunity.publicKeyHex()
             if (searchText.isEmpty()) {
                 val albums = albumRepository.getAlbums(userPublicKey, releaseRepository)
-                android.util.Log.d("SearchScreenViewModel", "Search (empty): ${albums.size} albums")
-                albums.forEach { album ->
-                    android.util.Log.d("SearchScreenViewModel", "Search album: id=${album.id}, magnet=${album.magnet}")
-                }
                 _searchResult.value = downloadedFirstInListOfAlbums(albums)
+                refreshMagnetLinks(albums)
             } else {
                 val result = albumRepository.searchAlbums(searchText)
-                android.util.Log.d("SearchScreenViewModel", "Search (query): ${result.size} albums for query '$searchText'")
-                result.forEach { album ->
-                    android.util.Log.d("SearchScreenViewModel", "Search album: id=${album.id}, magnet=${album.magnet}")
-                }
                 _searchResult.value = downloadedFirstInListOfAlbums(result)
+                refreshMagnetLinks(result)
             }
         }
 
@@ -114,17 +100,38 @@ class SearchScreenViewModel
             viewModelScope.launch {
                 _isRefreshing.value = true
                 delay(500)
-                val userPublicKey = musicCommunity.publicKeyHex()
-                val albums = albumRepository.getAlbums(userPublicKey, releaseRepository)
-                android.util.Log.d("SearchScreenViewModel", "Refresh: ${albums.size} albums")
-                albums.forEach { album ->
-                    android.util.Log.d("SearchScreenViewModel", "Refreshed album: id=${album.id}, magnet=${album.magnet}")
+                if (_searchQuery.value.isEmpty()) {
+                    val userPublicKey = musicCommunity.publicKeyHex()
+                    val albums = albumRepository.getAlbums(userPublicKey, releaseRepository)
+                    _searchResult.value = downloadedFirstInListOfAlbums(albums)
+                    _totalReleaseAmount.value = albums.size
+                    refreshMagnetLinks(albums)
                 }
-                _searchResult.value = downloadedFirstInListOfAlbums(albums)
                 _peerAmount.value = musicCommunity.getPeers().size
-                _totalReleaseAmount.value = albums.size
                 _isRefreshing.value = false
-                android.util.Log.d("SearchScreenViewModel", "Refreshed peerAmount: ${_peerAmount.value}, totalReleaseAmount: ${_totalReleaseAmount.value}")
+            }
+        }
+
+        /**
+         * Refresh magnet links for all albums
+         */
+        private fun refreshMagnetLinks(albums: List<Album>) {
+            viewModelScope.launch {
+                albums.forEach { album ->
+                    if (album.magnet == null ||
+                        album.magnet.isEmpty() ||
+                        album.magnet.isBlank() ||
+                        album.magnet == "access_restricted" ||
+                        album.magnet == "null" ||
+                        album.magnet == "undefined"
+                    ) {
+                        try {
+                            albumRepository.requestMagnetLink(album.id)
+                        } catch (e: Exception) {
+                            // Log error if needed
+                        }
+                    }
+                }
             }
         }
 

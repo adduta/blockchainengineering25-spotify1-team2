@@ -32,7 +32,7 @@ class ReleasePublishBlockRepository
             val transaction =
                 mutableMapOf(
                     "releaseId" to releaseId,
-                    "magnet" to magnet,
+                    "magnet" to "access_restricted",
                     "title" to title,
                     "artist" to artist,
                     "publisher" to myPeer.publicKey.keyToBin().toHex(),

@@ -3,10 +3,8 @@ package nl.tudelft.trustchain.musicdao.core.repositories
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.map
-import com.turn.ttorrent.common.Torrent
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.tudelft.ipv8.util.hexToBytes
@@ -20,6 +18,8 @@ import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetResponseMessage
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
 import nl.tudelft.trustchain.musicdao.core.torrent.TorrentEngine
 import javax.inject.Inject
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /**
  * This class will be the class the application interacts with and will return
@@ -49,42 +49,58 @@ class AlbumRepository
             return album
         }
 
-        suspend fun getAlbums(userPublicKey: String, releaseRepository: ReleaseRepository): List<Album> {
+        private fun isReleasePastDelayPeriod(releaseDate: String): Boolean {
+            try {
+                val releaseInstant = Instant.parse(releaseDate)
+                val sevenDaysAgo = Instant.now().minus(7, ChronoUnit.DAYS)
+                return releaseInstant.isBefore(sevenDaysAgo)
+            } catch (e: Exception) {
+                Log.e("AlbumRepository", "Error parsing release date: ${e.message}")
+                return false
+            }
+        }
+
+        suspend fun getAlbums(
+            userPublicKey: String,
+            releaseRepository: ReleaseRepository
+        ): List<Album> {
             val albumEntities = database.dao.getAll()
             Log.d("AlbumRepository", "Found ${albumEntities.size} albums in database")
 
             // For each album, check if we need to request the magnet link
             for (album in albumEntities) {
                 if (album.magnet == "access_restricted") {
-                    Log.d("AlbumRepository", "Found album ${album.id} with access_restricted magnet, requesting magnet link")
-                    val magnetLink = requestMagnetLink(album.id)
-                    // If user upgraded to a PRO account, but the user could not get the magnet link
-                    // for this specific album from none of the peers, then `album.magnet` should be
-                    // set to an empty string, rather than keeping it to
-                    // `access_restricted`. This way, when trying to display the torrent for such a
-                    // release, it can be displayed that the torrent could not be fetched.
-                    if (userTierVerifier.isProUser(userPublicKey.hexToBytes()) && magnetLink.isNullOrEmpty()) {
-                        withContext(Dispatchers.IO) {
-                            database.dao.updateReleaseMagnet(album.id, "", "")
+                    val isPro = userTierVerifier.isProUser(userPublicKey.hexToBytes())
+                    val isPastDelay = isReleasePastDelayPeriod(album.releaseDate)
+
+                    if (isPro || isPastDelay) {
+                        Log.d("AlbumRepository", "Found album ${album.id} with access_restricted magnet, requesting magnet link")
+                        val magnetLink = requestMagnetLink(album.id)
+                        if (magnetLink.isNullOrEmpty()) {
+                            withContext(Dispatchers.IO) {
+                                database.dao.updateReleaseMagnet(album.id, "", "")
+                            }
                         }
                     }
                 } else if (album.magnet.isEmpty()) {
                     Log.d("AlbumRepository", "Found album ${album.id} without magnet link, requesting magnet link")
                     val magnetLink = requestMagnetLink(album.id)
-                    // If user upgraded to a PRO account, but the user could not get the magnet link
-                    // for this specific album from none of the peers, then `album.magnet` should be
-                    // set to an empty string, rather than keeping it to
-                    // `access_restricted`. This way, when trying to display the torrent for such a
-                    // release, it can be displayed that the torrent could not be fetched.
-                    if (userTierVerifier.isProUser(userPublicKey.hexToBytes()) && magnetLink.isNullOrEmpty()) {
+                    if (magnetLink.isNullOrEmpty()) {
                         withContext(Dispatchers.IO) {
                             database.dao.updateReleaseMagnet(album.id, "", "")
                         }
                     }
                 } else {
-                    Log.d("AlbumRepository", "Found existing magnet link for album ${album.id}: ${album.magnet}")
+                    Log.d(
+                        "AlbumRepository",
+                        "Found existing magnet link for album ${album.id}: ${album.magnet}"
+                    )
                     if (album.infoHash.isNullOrEmpty() && album.magnet.isNotEmpty()) {
-                        Log.d("AlbumRepository", "For album ${album.id}, the magnet link was set, but the info has was not set. So, the infoHash will now be persisted.")
+                        Log.d(
+                            "AlbumRepository",
+                            "For album ${album.id}, the magnet link was set," +
+                                " but the info has was not set. So, the infoHash will now be persisted."
+                        )
                         val infoHash: String = TorrentEngine.magnetToInfoHash(album.magnet) ?: ""
                         withContext(Dispatchers.IO) {
                             database.dao.updateReleaseMagnet(album.id, album.magnet, infoHash)
@@ -93,14 +109,14 @@ class AlbumRepository
                 }
             }
 
-            // Filter albums based on user tier.
+            // Filter albums based on user tier and release date
             val albums = albumEntities.map { it.toAlbum() }
             return albums.filter { album ->
                 if (album.magnet == "access_restricted") {
-                    // Check if user is PRO
                     val isPro = userTierVerifier.isProUser(userPublicKey.hexToBytes())
-                    Log.d("AlbumRepository", "Album ${album.id} is access_restricted, user is PRO: $isPro")
-                    isPro
+                    val isPastDelay = isReleasePastDelayPeriod(album.releaseDate.toString())
+                    Log.d("AlbumRepository", "Album ${album.id} is access_restricted, user is PRO: $isPro, past delay: $isPastDelay")
+                    isPro || isPastDelay
                 } else {
                     true
                 }
@@ -118,9 +134,10 @@ class AlbumRepository
                 entities.map { entity ->
                     Log.d("AlbumRepository", "Processing album ${entity.id} in flow with magnet: ${entity.magnet}")
                     // Always return the album immediately, even without magnet link
-                    val album = entity.toAlbum().copy(
-                        magnet = if (entity.magnet.isEmpty()) "access_restricted" else entity.magnet
-                    )
+                    val album =
+                        entity.toAlbum().copy(
+                            magnet = if (entity.magnet.isEmpty()) "access_restricted" else entity.magnet
+                        )
 
                     // If no magnet link, request it in background
                     if (entity.magnet.isEmpty()) {
@@ -211,6 +228,7 @@ class AlbumRepository
             }
         }
 
+        @OptIn(DelicateCoroutinesApi::class)
         suspend fun requestMagnetLink(releaseId: String): String? {
             try {
                 Log.d("AlbumRepository", "Requesting magnet link for release $releaseId from peers")
@@ -305,5 +323,24 @@ class AlbumRepository
             database.dao.getAll()
             // Log the refresh for debugging
             Log.d("AlbumRepository", "Cache refreshed with ${releaseBlocks.size} releases")
+        }
+
+        /**
+         * Fetch albums only from the local database/cache, without any network or magnet link requests.
+         * This is fast and always returns immediately.
+         */
+        suspend fun getAlbumsFromCache(userPublicKey: String): List<Album> {
+            val albumEntities = database.dao.getAll()
+            Log.d("AlbumRepository", "[getAlbumsFromCache] Found ${albumEntities.size} albums in database")
+            val albums = albumEntities.map { it.toAlbum() }
+            return albums.filter { album ->
+                if (album.magnet == "access_restricted") {
+                    val isPro = userTierVerifier.isProUser(userPublicKey.hexToBytes())
+                    Log.d("AlbumRepository", "[getAlbumsFromCache] Album ${album.id} is access_restricted, user is PRO: $isPro")
+                    isPro
+                } else {
+                    true
+                }
+            }
         }
     }

@@ -344,13 +344,14 @@ class TrustChainApplication : Application() {
 
         // Create a temporary CacheDatabase instance for initialization
         // This will be replaced by the proper instance from Hilt later
-        val tempCacheDatabase = Room.databaseBuilder(
-            applicationContext,
-            CacheDatabase::class.java,
-            "musicdao-database"
-        ).fallbackToDestructiveMigration()
-            .addTypeConverter(Converters(GsonParser(Gson())))
-            .build()
+        val tempCacheDatabase =
+            Room.databaseBuilder(
+                applicationContext,
+                CacheDatabase::class.java,
+                "musicdao-database"
+            ).fallbackToDestructiveMigration()
+                .addTypeConverter(Converters(GsonParser(Gson())))
+                .build()
 
         return OverlayConfiguration(
             MusicCommunity.Factory(settings, store, tempCacheDatabase),

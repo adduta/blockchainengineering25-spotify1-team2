@@ -100,8 +100,9 @@ class HiltModules {
     @Singleton
     fun musicCommunity(cacheDatabase: CacheDatabase): MusicCommunity {
         // Get the existing community instance
-        val community = IPv8Android.getInstance().getOverlay<MusicCommunity>()
-            ?: throw IllegalStateException("MusicCommunity is not configured")
+        val community =
+            IPv8Android.getInstance().getOverlay<MusicCommunity>()
+                ?: throw IllegalStateException("MusicCommunity is not configured")
 
         // Inject the CacheDatabase into the existing instance
         community.setCacheDatabase(cacheDatabase)

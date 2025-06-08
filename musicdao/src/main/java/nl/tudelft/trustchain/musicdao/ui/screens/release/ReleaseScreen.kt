@@ -212,60 +212,61 @@ fun ReleaseScreen(
             }
             if (state == 1) {
                 val current = torrentStatus
-                if (current != null) {
-                    TorrentStatusScreen(current)
-                } else {
-                    // TODO: Is this if statement needed? I guess that in case the magnet is
-                    //  available (together with the infoHash), then `torrentStatus` will be
-                    //  non-null, thus the execution flow will not go through this branch at all.
-                    //  Therefore, no rendering will ever be done based on the DOWNLOADING and
-                    //  DOWNLOAD_ERROR states.
-                    if (!albumState?.magnet?.contains("magnet")!!) {
+                val accessReason = viewModel.accessReason.collectAsState().value
+                
+                when {
+                    current != null -> {
+                        TorrentStatusScreen(current)
+                    }
+                    accessReason == ReleaseScreenViewModel.AccessReason.DOWNLOADING -> {
                         Column(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Initializing torrent...",
+                                style = MaterialTheme.typography.h6
+                            )
+                        }
+                    }
+                    else -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text =
-                                    when (viewModel.accessReason.collectAsState().value) {
-                                        ReleaseScreenViewModel.AccessReason.RESTRICTED -> "This release is currently restricted"
-                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "This release is not available"
-                                        ReleaseScreenViewModel.AccessReason.DOWNLOADING -> "Downloading release..."
-                                        ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
-                                        null -> "Release not available for download"
-                                    },
+                                text = when (accessReason) {
+                                    ReleaseScreenViewModel.AccessReason.RESTRICTED -> "This release is currently restricted"
+                                    ReleaseScreenViewModel.AccessReason.WAITING_PERIOD -> "This release will be available in 7 days"
+                                    ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "This release is not available"
+                                    ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
+                                    null -> "Release not available for download"
+                                    else -> "Loading..."
+                                },
                                 style = MaterialTheme.typography.h6,
                                 color = MaterialTheme.colors.error
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text =
-                                    when (viewModel.accessReason.collectAsState().value) {
-                                        ReleaseScreenViewModel.AccessReason.RESTRICTED ->
-                                            "" +
-                                                "Upgrade to Pro to access this release immediately, " +
-                                                "or wait for the release period to end"
-                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET ->
-                                            "" +
-                                                "The artist may have removed this release or the magnet link for it could not be retrieved."
-                                        ReleaseScreenViewModel.AccessReason.DOWNLOADING ->
-                                            "" +
-                                                "Please wait while we download the release"
-                                        ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR ->
-                                            "Please try again later"
-                                        null ->
-                                            "This could be because:\n•" +
-                                                " You need to upgrade to Pro\n• " +
-                                                "The release is too new\n•" +
-                                                " The release is no longer available"
-                                    },
-                                style = MaterialTheme.typography.body1,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
-                                textAlign = TextAlign.Center
-                            )
+                            if (accessReason == ReleaseScreenViewModel.AccessReason.RESTRICTED) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Upgrade to Pro to access this release immediately, or wait for the release period to end",
+                                    style = MaterialTheme.typography.body2,
+                                    textAlign = TextAlign.Center
+                                )
+                            } else if (accessReason == ReleaseScreenViewModel.AccessReason.WAITING_PERIOD) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Upgrade to Pro to access this release immediately",
+                                    style = MaterialTheme.typography.body2,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 }

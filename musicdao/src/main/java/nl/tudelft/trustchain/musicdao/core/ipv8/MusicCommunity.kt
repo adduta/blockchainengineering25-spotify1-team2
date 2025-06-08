@@ -18,16 +18,12 @@ import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.util.hexToBytes
 import nl.tudelft.ipv8.util.toHex
 import java.util.*
-import nl.tudelft.trustchain.musicdao.core.repositories.AlbumRepository
-import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
-import kotlinx.coroutines.runBlocking
 import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetRequestMessage
 import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetResponseMessage
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import nl.tudelft.trustchain.musicdao.core.cache.entities.AlbumEntity
 import nl.tudelft.trustchain.musicdao.core.cache.CacheDatabase
 
 @Suppress("DEPRECATION")
@@ -186,15 +182,17 @@ class MusicCommunity(
 
                     if (albumEntity.magnet.isNotEmpty() && albumEntity.magnet != "access_restricted") {
                         // If we have the release and its magnet link, send it back to the requesting peer
-                        val response = MagnetResponseMessage(
-                            releaseId = request.releaseId,
-                            magnetLink = albumEntity.magnet
-                        )
+                        val response =
+                            MagnetResponseMessage(
+                                releaseId = request.releaseId,
+                                magnetLink = albumEntity.magnet
+                            )
 
-                        val responsePacket = serializePacket(
-                            MessageId.MAGNET_RESPONSE_MESSAGE,
-                            response
-                        )
+                        val responsePacket =
+                            serializePacket(
+                                MessageId.MAGNET_RESPONSE_MESSAGE,
+                                response
+                            )
 
                         send(peer, responsePacket)
                         Log.d("MusicCommunity", "Sent magnet link for release ${request.releaseId} to peer ${peer.mid}")
