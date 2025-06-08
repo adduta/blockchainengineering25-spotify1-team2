@@ -62,10 +62,14 @@ class AlbumRepository
 
         suspend fun getAlbums(
             userPublicKey: String,
-            releaseRepository: ReleaseRepository
+            releaseRepository: ReleaseRepository,
+            searchText: String = ""
         ): List<Album> {
-            val albumEntities = database.dao.getAll()
-            Log.d("AlbumRepository", "Found ${albumEntities.size} albums in database")
+            val albumEntities: List<AlbumEntity> = if (searchText.isEmpty()) {
+                database.dao.getAll()
+            } else {
+                database.dao.localSearch(searchText)
+            }
 
             // For each album, check if we need to request the magnet link
             for (album in albumEntities) {
@@ -161,10 +165,6 @@ class AlbumRepository
 
         suspend fun getAlbumsFromArtist(publicKey: String): List<Album> {
             return database.dao.getFromArtist(publicKey = publicKey).map { it.toAlbum() }
-        }
-
-        suspend fun searchAlbums(keyword: String): List<Album> {
-            return database.dao.localSearch(keyword).map { it.toAlbum() }
         }
 
         @OptIn(DelicateCoroutinesApi::class)

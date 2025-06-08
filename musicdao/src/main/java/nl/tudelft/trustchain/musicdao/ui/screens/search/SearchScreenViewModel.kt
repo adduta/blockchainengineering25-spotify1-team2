@@ -85,15 +85,9 @@ class SearchScreenViewModel
 
         private suspend fun search(searchText: String) {
             val userPublicKey = musicCommunity.publicKeyHex()
-            if (searchText.isEmpty()) {
-                val albums = albumRepository.getAlbums(userPublicKey, releaseRepository)
-                _searchResult.value = downloadedFirstInListOfAlbums(albums)
-                refreshMagnetLinks(albums)
-            } else {
-                val result = albumRepository.searchAlbums(searchText)
-                _searchResult.value = downloadedFirstInListOfAlbums(result)
-                refreshMagnetLinks(result)
-            }
+            val albums = albumRepository.getAlbums(userPublicKey, releaseRepository, searchText)
+            _searchResult.value = downloadedFirstInListOfAlbums(albums)
+            refreshMagnetLinks(albums)
         }
 
         fun refresh() {
