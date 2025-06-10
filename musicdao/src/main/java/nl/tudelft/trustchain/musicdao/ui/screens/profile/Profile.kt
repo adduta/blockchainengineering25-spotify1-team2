@@ -97,108 +97,112 @@ fun Profile(
 
         Column(modifier = Modifier.padding(20.dp)) {
             // Account Status Section
-            Card(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                elevation = 4.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+            if (viewModel.isOwnProfile()) {
+                Card(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                    elevation = 4.dp
                 ) {
-                    Text(
-                        text = "Account Status",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.padding(16.dp)
                     ) {
-                        TierStatusBadge(
-                            tier = accountType,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-
                         Text(
-                            text =
-                                when (accountType) {
-                                    AccountType.PRO -> "Pro Account"
-                                    AccountType.BASIC -> "Basic Account"
-                                },
-                            fontSize = 16.sp
+                            text = "Account Status",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
                         )
-                    }
 
-                    if (accountType == AccountType.PRO && validUntil != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        val formattedDate =
-                            validUntil?.let { instant ->
-                                instant.atZone(ZoneId.systemDefault())
-                                    .toLocalDate()
-                                    .format(DateTimeFormatter.ISO_LOCAL_DATE)
-                            } ?: "Unknown"
-                        Text(
-                            text = "Valid until: $formattedDate",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
-                        )
-                    }
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    if (accountType == AccountType.BASIC) {
-                        Button(
-                            onClick = { showUpgradeDialog = true },
-                            modifier = Modifier.fillMaxWidth()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
+                            TierStatusBadge(
+                                tier = accountType,
                                 modifier = Modifier.padding(end = 8.dp)
                             )
-                            Text("Upgrade to Pro")
+
+                            Text(
+                                text =
+                                    when (accountType) {
+                                        AccountType.PRO -> "Pro Account"
+                                        AccountType.BASIC -> "Basic Account"
+                                    },
+                                fontSize = 16.sp
+                            )
+                        }
+
+                        if (accountType == AccountType.PRO && validUntil != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val formattedDate =
+                                validUntil?.let { instant ->
+                                    instant.atZone(ZoneId.systemDefault())
+                                        .toLocalDate()
+                                        .format(DateTimeFormatter.ISO_LOCAL_DATE)
+                                } ?: "Unknown"
+                            Text(
+                                text = "Valid until: $formattedDate",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (accountType == AccountType.BASIC && viewModel.isOwnProfile()) {
+                            Button(
+                                onClick = { showUpgradeDialog = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text("Upgrade to Pro")
+                            }
                         }
                     }
                 }
             }
 
             // Benefits Section
-            Card(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                elevation = 4.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+            if (viewModel.isOwnProfile() && accountType == AccountType.BASIC) {
+                Card(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                    elevation = 4.dp
                 ) {
-                    Text(
-                        text = "Pro Benefits",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Pro Benefits",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    ProBenefitItem(
-                        title = "Instant Access",
-                        description = "Get immediate access to new releases"
-                    )
+                        ProBenefitItem(
+                            title = "Instant Access",
+                            description = "Get immediate access to new releases"
+                        )
 
-                    ProBenefitItem(
-                        title = "No Waiting Period",
-                        description = "Skip the 7-day waiting period for basic users"
-                    )
+                        ProBenefitItem(
+                            title = "No Waiting Period",
+                            description = "Skip the 7-day waiting period for basic users"
+                        )
 
-                    ProBenefitItem(
-                        title = "Support Artists",
-                        description = "Directly support your favorite artists"
-                    )
+                        ProBenefitItem(
+                            title = "Support Artists",
+                            description = "Directly support your favorite artists"
+                        )
+                    }
                 }
             }
 
@@ -243,7 +247,7 @@ fun Profile(
         }
     }
 
-    if (showUpgradeDialog) {
+    if (showUpgradeDialog && viewModel.isOwnProfile()) {
         val currentBalance by bitcoinWalletViewModel.confirmedBalance.collectAsState()
         UpgradeDialog(
             onDismiss = { showUpgradeDialog = false },

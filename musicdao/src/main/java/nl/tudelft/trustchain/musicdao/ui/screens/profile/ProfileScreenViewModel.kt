@@ -18,6 +18,7 @@ import nl.tudelft.trustchain.musicdao.core.services.UserTierService
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier.UserTierBlockRepository
 import nl.tudelft.trustchain.musicdao.core.ipv8.UserTierVerifier
 import nl.tudelft.ipv8.util.hexToBytes
+import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.ui.screens.wallet.BitcoinWalletViewModel
 import java.time.Instant
 
@@ -30,7 +31,8 @@ class ProfileScreenViewModel
         private val userTierService: UserTierService,
         private val userTierBlockRepository: UserTierBlockRepository,
         private val userTierVerifier: UserTierVerifier,
-        private val albumRepository: AlbumRepository
+        private val albumRepository: AlbumRepository,
+        private val musicCommunity: MusicCommunity
     ) : ViewModel() {
         private val _profile: MutableStateFlow<Artist?> = MutableStateFlow(null)
         var profile: StateFlow<Artist?> = _profile
@@ -44,12 +46,19 @@ class ProfileScreenViewModel
         private val _validUntil = MutableStateFlow<Instant?>(null)
         val validUntil: StateFlow<Instant?> = _validUntil
 
+         fun isOwnProfile(): Boolean {
+            return publicKey == musicCommunity.publicKeyHex()
+        }
+
         init {
             viewModelScope.launch {
                 profile = artistRepository.getArtistStateFlow(publicKey = publicKey)
                 _releases.value = artistRepository.getArtistReleases(publicKey = publicKey)
             }
-            loadTierStatus()
+            // Only load tier status if this is the user's own profile
+            if (isOwnProfile()) {
+                loadTierStatus()
+            }
         }
 
         private fun loadTierStatus() {
