@@ -5,7 +5,6 @@ import android.util.Log
 import nl.tudelft.trustchain.musicdao.core.ipv8.modules.search.KeywordSearchMessage
 import com.frostwire.jlibtorrent.Sha1Hash
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
@@ -25,7 +24,6 @@ import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetRequestMessage
 import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetResponseMessage
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import nl.tudelft.trustchain.musicdao.core.cache.CacheDatabase
 import nl.tudelft.trustchain.musicdao.core.torrent.TorrentEngine
 

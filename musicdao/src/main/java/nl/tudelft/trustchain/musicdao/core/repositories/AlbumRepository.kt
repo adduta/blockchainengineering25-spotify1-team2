@@ -14,7 +14,6 @@ import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.core.ipv8.UserTierVerifier
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.releasePublish.ReleasePublishBlock
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.releasePublish.ReleasePublishBlockRepository
-import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetResponseMessage
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
 import nl.tudelft.trustchain.musicdao.core.torrent.TorrentEngine
 import javax.inject.Inject
@@ -65,11 +64,12 @@ class AlbumRepository
             releaseRepository: ReleaseRepository,
             searchText: String = ""
         ): List<Album> {
-            val albumEntities: List<AlbumEntity> = if (searchText.isEmpty()) {
-                database.dao.getAll()
-            } else {
-                database.dao.localSearch(searchText)
-            }
+            val albumEntities: List<AlbumEntity> =
+                if (searchText.isEmpty()) {
+                    database.dao.getAll()
+                } else {
+                    database.dao.localSearch(searchText)
+                }
 
             // For each album, check if we need to request the magnet link
             for (album in albumEntities) {

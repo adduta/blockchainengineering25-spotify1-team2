@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
-import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
@@ -41,18 +40,20 @@ fun SearchScreen(
             placeholder = { Text("Search") },
             trailingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
             maxLines = 1,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
             shape = RectangleShape,
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                backgroundColor = Color(0xFF222222),
-                focusedBorderColor = Color(0xFF4CAF50), // green accent
-                unfocusedBorderColor = Color(0xFF444444),
-                textColor = Color.White,
-                placeholderColor = Color(0xFFAAAAAA),
-                trailingIconColor = Color(0xFFAAAAAA)
-            )
+            colors =
+                TextFieldDefaults.outlinedTextFieldColors(
+                    backgroundColor = Color(0xFF222222),
+                    focusedBorderColor = Color(0xFF4CAF50),
+                    unfocusedBorderColor = Color(0xFF444444),
+                    textColor = Color.White,
+                    placeholderColor = Color(0xFFAAAAAA),
+                    trailingIconColor = Color(0xFFAAAAAA)
+                )
         )
         ReleaseList(releasesState = releases, navController = navController)
     }

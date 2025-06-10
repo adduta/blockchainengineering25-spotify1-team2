@@ -46,7 +46,7 @@ class ProfileScreenViewModel
         private val _validUntil = MutableStateFlow<Instant?>(null)
         val validUntil: StateFlow<Instant?> = _validUntil
 
-         fun isOwnProfile(): Boolean {
+        fun isOwnProfile(): Boolean {
             return publicKey == musicCommunity.publicKeyHex()
         }
 

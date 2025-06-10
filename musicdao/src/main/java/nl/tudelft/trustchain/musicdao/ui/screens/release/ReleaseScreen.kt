@@ -213,16 +213,17 @@ fun ReleaseScreen(
             if (state == 1) {
                 val current = torrentStatus
                 val accessReason = viewModel.accessReason.collectAsState().value
-                
+
                 when {
                     current != null -> {
                         TorrentStatusScreen(current)
                     }
                     accessReason == ReleaseScreenViewModel.AccessReason.DOWNLOADING -> {
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             CircularProgressIndicator()
@@ -235,20 +236,22 @@ fun ReleaseScreen(
                     }
                     else -> {
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = when (accessReason) {
-                                    ReleaseScreenViewModel.AccessReason.RESTRICTED -> "This release is currently restricted"
-                                    ReleaseScreenViewModel.AccessReason.WAITING_PERIOD -> "This release will be available in 7 days"
-                                    ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "This release is not available"
-                                    ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
-                                    null -> "Release not available for download"
-                                    else -> "Loading..."
-                                },
+                                text =
+                                    when (accessReason) {
+                                        ReleaseScreenViewModel.AccessReason.RESTRICTED -> "This release is currently restricted"
+                                        ReleaseScreenViewModel.AccessReason.WAITING_PERIOD -> "This release will be available in 7 days"
+                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "This release is not available"
+                                        ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
+                                        null -> "Release not available for download"
+                                        else -> "Loading..."
+                                    },
                                 style = MaterialTheme.typography.h6,
                                 color = MaterialTheme.colors.error
                             )

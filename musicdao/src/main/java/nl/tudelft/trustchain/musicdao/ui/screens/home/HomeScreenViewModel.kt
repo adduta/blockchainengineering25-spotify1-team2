@@ -40,19 +40,20 @@ class HomeScreenViewModel
             viewModelScope.launch {
                 try {
                     val userPublicKey = musicCommunity.publicKeyHex()
-                    
+
                     // Set initial peer count
                     _peerAmount.postValue(musicCommunity.getPeers().size)
 
                     // Set up the albums flow observer
                     val albumsFlow = albumRepository.getAlbumsFlow(userPublicKey)
-                    albumsFlowObserver = androidx.lifecycle.Observer { albums ->
-                        viewModelScope.launch {
-                            refreshMagnetLinks(albums, userPublicKey)
-                            _releases.postValue(albums)
-                            _totalReleaseAmount.postValue(albums.size)
+                    albumsFlowObserver =
+                        androidx.lifecycle.Observer { albums ->
+                            viewModelScope.launch {
+                                refreshMagnetLinks(albums, userPublicKey)
+                                _releases.postValue(albums)
+                                _totalReleaseAmount.postValue(albums.size)
+                            }
                         }
-                    }
                     albumsFlow.observeForever(albumsFlowObserver!!)
 
                     // Initial load of albums
@@ -90,17 +91,24 @@ class HomeScreenViewModel
                 try {
                     albums.forEach { album ->
                         // Check for various cases where we need to request a magnet link
-                        if (album.magnet == null || 
-                            album.magnet.isEmpty() || 
-                            album.magnet.isBlank() || 
+                        if (album.magnet == null ||
+                            album.magnet.isEmpty() ||
+                            album.magnet.isBlank() ||
                             album.magnet == "access_restricted" ||
                             album.magnet == "null" ||
-                            album.magnet == "undefined") {
+                            album.magnet == "undefined"
+                        ) {
                             try {
-                                android.util.Log.d("HomeScreenViewModel", "Requesting magnet link for album ${album.id} (current magnet: ${album.magnet})")
+                                android.util.Log.d(
+                                    "HomeScreenViewModel",
+                                    "Requesting magnet link for album ${album.id} (current magnet: ${album.magnet})"
+                                )
                                 albumRepository.requestMagnetLink(album.id)
                             } catch (e: Exception) {
-                                android.util.Log.e("HomeScreenViewModel", "Error requesting magnet link for album ${album.id}: ${e.message}")
+                                android.util.Log.e(
+                                    "HomeScreenViewModel",
+                                    "Error requesting magnet link for album ${album.id}: ${e.message}"
+                                )
                             }
                         }
                     }
