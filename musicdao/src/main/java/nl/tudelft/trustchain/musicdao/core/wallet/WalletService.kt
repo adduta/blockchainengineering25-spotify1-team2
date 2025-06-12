@@ -1,10 +1,8 @@
 package nl.tudelft.trustchain.musicdao.core.wallet
-
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
-import nl.tudelft.trustchain.musicdao.core.coin.CoinUtil
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
@@ -106,6 +104,11 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
     }
 
     fun sendBatchTransaction(recipients: List<Pair<String, String>>): Boolean {
+        val tx = buildBatchTransaction(recipients)
+        return sendTransaction(tx)
+    }
+
+    fun buildBatchTransaction(recipients: List<Pair<String, String>>): Transaction {
         val tx = Transaction(config.networkParams)
         for ((publicKey, coinsAmount) in recipients) {
             val coins =
@@ -125,28 +128,31 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
                 }
             tx.addOutput(Coin.valueOf(satoshiAmount), targetAddress)
         }
+        return tx
+    }
+
+    fun estimateFee(tx: Transaction): Long {
+        val request = SendRequest.forTx(tx)
+        wallet().completeTx(request)
+        val feePaid: Long = request.tx.getFee().value
+        return feePaid
+    }
+
+    fun sendTransaction(tx: Transaction): Boolean {
         val sendRequest = SendRequest.forTx(tx)
         return try {
             app.wallet().sendCoins(sendRequest)
             Log.d("MusicDao", "Wallet (2): successfully sent batch transaction")
             true
         } catch (e: Exception) {
-            Log.d("MusicDao", "Wallet (3): failed sending batch transaction")
+            Log.d("MusicDao", "Wallet (3): failed sending batch transaction $e")
             false
         }
     }
 
-    fun estimateFee(recipients: List<Pair<String, String>>): Long {
-        val tx = Transaction(config.networkParams)
-        for ((publicKey, coinsAmount) in recipients) {
-            val coins =
-                try {
-                    BigDecimal(coinsAmount.toDouble())
-                } catch (e: NumberFormatException) {
-                    Log.d("MusicDao", "Wallet (2): failed to parse $coinsAmount")
-                    continue
-                }
-            val satoshiAmount = (coins * SATS_PER_BITCOIN).toLong()
+    fun buildAddressList(addressStringList: List<String>): List<Address> {
+        val addressList = mutableListOf<Address>()
+        for (publicKey in addressStringList) {
             val targetAddress =
                 try {
                     Address.fromString(config.networkParams, publicKey)
@@ -154,9 +160,56 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
                     Log.d("MusicDao", "Wallet (3): failed to parse $publicKey")
                     continue
                 }
-            tx.addOutput(Coin.valueOf(satoshiAmount), targetAddress)
+            addressList.add(targetAddress)
         }
-        return CoinUtil.calculateEstimatedTransactionFee(tx, config.networkParams)
+        return addressList
+    }
+
+    fun createBatchSpendExact(
+        addressStringList: List<String>,
+        target: Long,
+        minPerRecipient: Long = 5000L,
+        feeBuffer: Long = 3000L
+    ): Pair<Transaction, Long> {
+        require(addressStringList.isNotEmpty()) { "Recipient list must not be empty." }
+        val addressList = buildAddressList(addressStringList)
+        val size = addressList.size
+
+        // Binary search for the max payout per address such that sum + fee <= target
+        var left = minPerRecipient
+        var right = target / size
+        var bestAmount = -1L
+
+        while (left <= right) {
+            val mid = (left + right) / 2
+            val tx = Transaction(config.networkParams)
+            addressList.forEach { address -> tx.addOutput(Coin.valueOf(mid), address) }
+            try {
+                val fee = estimateFee(tx)
+                val totalNeeded = mid * size + fee
+
+                if (totalNeeded <= target - feeBuffer) {
+                    bestAmount = mid // So far, this works!
+                    left = mid + 1 // Try to pay more per person
+                } else {
+                    right = mid - 1 // Too expensive, pay less
+                }
+            } catch (e: Exception) {
+                // Log.e("DonationWalletLottery", "Error in estimating money: $e")
+                right = mid - 1
+            }
+        }
+
+        if (bestAmount < minPerRecipient) {
+            throw IllegalArgumentException(
+                "Cannot create batch tx: amount per recipient ($bestAmount) too low for $size recipients with total $target."
+            )
+        }
+
+        // Build the final transaction with the best amount found
+        val finalTx = Transaction(config.networkParams)
+        addressList.forEach { address -> finalTx.addOutput(Coin.valueOf(bestAmount), address) }
+        return Pair(finalTx, bestAmount)
     }
 
     /**

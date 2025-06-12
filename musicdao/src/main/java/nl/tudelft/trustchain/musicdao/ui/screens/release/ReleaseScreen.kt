@@ -40,7 +40,8 @@ import nl.tudelft.trustchain.musicdao.ui.util.dateToShortString
 import nl.tudelft.trustchain.musicdao.ui.navigation.Screen
 import nl.tudelft.trustchain.musicdao.ui.screens.torrent.TorrentStatusScreen
 import dagger.hilt.android.EntryPointAccessors
-import java.io.File
+import android.util.Log
+import nl.tudelft.trustchain.musicdao.core.util.ListenCounter
 
 @ExperimentalMaterialApi
 @Composable
@@ -73,15 +74,19 @@ fun ReleaseScreen(
 
     fun play(
         track: Song,
-        cover: File?
+        album: Album
     ) {
-        playerViewModel.playDownloadedTrack(track, cover)
+        ListenCounter.increment(context, album.publisher)
+        Log.d("Counter", "Counter: ${ListenCounter.getCount(context, album.publisher)}")
+        playerViewModel.playDownloadedTrack(track, album.cover)
     }
 
     fun play(
         track: DownloadingTrack,
-        cover: File?
+        album: Album
     ) {
+        ListenCounter.increment(context, album.publisher)
+        Log.d("Counter", "Counter: ${ListenCounter.getCount(context, album.publisher)}")
         playerViewModel.playDownloadingTrack(
             Song(
                 file = track.file,
@@ -89,7 +94,7 @@ fun ReleaseScreen(
                 title = track.title
             ),
             context,
-            cover
+            album.cover
         )
     }
 
@@ -109,7 +114,7 @@ fun ReleaseScreen(
                             ?: return@collect
 
                     if (!isPlaying && targetTrack.progress > 20 && targetTrack.progress < 99) {
-                        play(targetTrack, album.cover)
+                        play(targetTrack, album)
                     }
                 }
             }
@@ -171,7 +176,7 @@ fun ReleaseScreen(
                                     contentDescription = null
                                 )
                             },
-                            modifier = Modifier.clickable { play(it, album.cover) }
+                            modifier = Modifier.clickable { play(it, album) }
                         )
                     }
                 } else {
@@ -194,7 +199,7 @@ fun ReleaseScreen(
                                 },
                                 modifier =
                                     Modifier.clickable {
-                                        play(it, album.cover)
+                                        play(it, album)
                                     }
                             )
                         }
