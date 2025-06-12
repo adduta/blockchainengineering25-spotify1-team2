@@ -186,7 +186,6 @@ fun BitcoinWalletScreen(bitcoinWalletViewModel: BitcoinWalletViewModel) {
                         }
                     }
 
-
                     // Column(modifier = Modifier.padding(bottom = 20.dp)) {
                     //     Text(text = "Donation Wallet Balance", fontWeight = FontWeight.Bold)
                     //     Text(text =  bitcoinWalletViewModel.donationWalletBalance.value ?: "Not found")

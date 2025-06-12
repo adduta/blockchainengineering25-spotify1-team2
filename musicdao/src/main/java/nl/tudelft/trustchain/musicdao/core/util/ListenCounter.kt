@@ -22,13 +22,19 @@ object ListenCounter {
         }
     }
 
-    fun increment(context: Context, artistPublicKey: String) {
+    fun increment(
+        context: Context,
+        artistPublicKey: String
+    ) {
         initialize(context)
         listenCounts[artistPublicKey] = (listenCounts[artistPublicKey] ?: 0) + 1
         save(context)
     }
 
-    fun getCount(context: Context, artistPublicKey: String): Int {
+    fun getCount(
+        context: Context,
+        artistPublicKey: String
+    ): Int {
         initialize(context)
         return listenCounts[artistPublicKey] ?: 0
     }
@@ -48,4 +54,4 @@ object ListenCounter {
         prefs.edit().clear().apply()
         listenCounts.clear()
     }
-} 
+}

@@ -3,7 +3,6 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
-import nl.tudelft.trustchain.musicdao.core.coin.CoinUtil
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
@@ -109,7 +108,7 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
         return sendTransaction(tx)
     }
 
-    fun buildBatchTransaction(recipients: List<Pair<String, String>>):Transaction {
+    fun buildBatchTransaction(recipients: List<Pair<String, String>>): Transaction {
         val tx = Transaction(config.networkParams)
         for ((publicKey, coinsAmount) in recipients) {
             val coins =
@@ -137,24 +136,23 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
         wallet().completeTx(request)
         val feePaid: Long = request.tx.getFee().value
         return feePaid
-
     }
 
-    fun sendTransaction(tx: Transaction): Boolean{
+    fun sendTransaction(tx: Transaction): Boolean {
         val sendRequest = SendRequest.forTx(tx)
         return try {
             app.wallet().sendCoins(sendRequest)
             Log.d("MusicDao", "Wallet (2): successfully sent batch transaction")
             true
         } catch (e: Exception) {
-            Log.d("MusicDao", "Wallet (3): failed sending batch transaction ${e}")
+            Log.d("MusicDao", "Wallet (3): failed sending batch transaction $e")
             false
         }
     }
 
-    fun buildAddressList(addressStringList: List<String>): List<Address>{
+    fun buildAddressList(addressStringList: List<String>): List<Address> {
         val addressList = mutableListOf<Address>()
-        for(publicKey in addressStringList){
+        for (publicKey in addressStringList) {
             val targetAddress =
                 try {
                     Address.fromString(config.networkParams, publicKey)
@@ -172,7 +170,7 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
         target: Long,
         minPerRecipient: Long = 5000L,
         feeBuffer: Long = 3000L
-    ): Pair<Transaction,Long> {
+    ): Pair<Transaction, Long> {
         require(addressStringList.isNotEmpty()) { "Recipient list must not be empty." }
         val addressList = buildAddressList(addressStringList)
         val size = addressList.size
@@ -186,26 +184,26 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
             val mid = (left + right) / 2
             val tx = Transaction(config.networkParams)
             addressList.forEach { address -> tx.addOutput(Coin.valueOf(mid), address) }
-            try{
+            try {
                 val fee = estimateFee(tx)
                 val totalNeeded = mid * size + fee
 
                 if (totalNeeded <= target - feeBuffer) {
-                    bestAmount = mid  // So far, this works!
-                    left = mid + 1    // Try to pay more per person
+                    bestAmount = mid // So far, this works!
+                    left = mid + 1 // Try to pay more per person
                 } else {
-                    right = mid - 1   // Too expensive, pay less
+                    right = mid - 1 // Too expensive, pay less
                 }
             } catch (e: Exception) {
-                //Log.e("DonationWalletLottery", "Error in estimating money: $e")
-                right = mid -1
+                // Log.e("DonationWalletLottery", "Error in estimating money: $e")
+                right = mid - 1
             }
-
-
         }
 
         if (bestAmount < minPerRecipient) {
-            throw IllegalArgumentException("Cannot create batch tx: amount per recipient ($bestAmount) too low for $size recipients with total $target.")
+            throw IllegalArgumentException(
+                "Cannot create batch tx: amount per recipient ($bestAmount) too low for $size recipients with total $target."
+            )
         }
 
         // Build the final transaction with the best amount found
@@ -213,7 +211,6 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
         addressList.forEach { address -> finalTx.addOutput(Coin.valueOf(bestAmount), address) }
         return Pair(finalTx, bestAmount)
     }
-
 
     /**
      * Query the faucet to the default protocol address

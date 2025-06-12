@@ -3,12 +3,8 @@ package nl.tudelft.trustchain.musicdao.core.wallet
 import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.tudelft.trustchain.musicdao.core.repositories.ArtistRepository
 import org.bitcoinj.core.Coin
@@ -17,8 +13,6 @@ import org.bitcoinj.core.PeerAddress
 import org.bitcoinj.core.listeners.DownloadProgressTracker
 import org.bitcoinj.kits.WalletAppKit
 import org.bitcoinj.params.RegTestParams
-import java.io.PrintWriter
-import java.io.StringWriter
 import java.net.InetAddress
 import java.net.UnknownHostException
 import java.util.Date
@@ -162,19 +156,16 @@ class DonationWalletManager
                 val target = balance.value
 
                 // Calculate amount per artist (1/n of total balance)
-                //val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
+                // val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
 
                 val result = walletService.createBatchSpendExact(addressStringList, target)
                 Log.i("DonationWalletLottery", "Each artist receives: ${result.second}")
                 Log.i("DonationWalletLottery", "Money distributed to artists without fee: ${result.second * artists.size}")
 
                 walletService.sendTransaction(result.first)
-
-
             } catch (e: Exception) {
                 Log.e("DonationWalletLottery", "Error in lottery distribution: ${e.message}")
             }
-
         }
 
         // Stop method to clean up resources

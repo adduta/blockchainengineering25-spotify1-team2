@@ -1,6 +1,5 @@
 package nl.tudelft.trustchain.musicdao.ui.screens.wallet
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import nl.tudelft.trustchain.musicdao.core.repositories.ArtistRepository
@@ -37,6 +36,7 @@ class BitcoinWalletViewModel
 
         val donationAddress: MutableStateFlow<String> = MutableStateFlow("")
         val donationBalance: MutableStateFlow<Coin?> = MutableStateFlow(null)
+
         init {
 
             viewModelScope.launch {
