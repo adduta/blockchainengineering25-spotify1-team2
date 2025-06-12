@@ -42,6 +42,7 @@ fun CreateReleaseDialog(navController: NavController) {
     val title = rememberSaveable { mutableStateOf("") }
     val artist = rememberSaveable { mutableStateOf("") }
     val date = rememberSaveable { mutableStateOf("") }
+    val isExclusive = rememberSaveable { mutableStateOf(false) }
 
     fun openFilePickerDialog() {
         AppContainer.currentCallback = {
@@ -78,7 +79,8 @@ fun CreateReleaseDialog(navController: NavController) {
                     title.value,
                     releaseDate = Instant.now().toString(),
                     uris = fileList.value,
-                    localContext
+                    localContext,
+                    isExclusive = isExclusive.value
                 )
             if (result) {
                 SnackbarHandler.displaySnackbar(text = "Successfully published your release.")
@@ -177,6 +179,17 @@ fun CreateReleaseDialog(navController: NavController) {
                         ) {
                             Checkbox(checked = true, enabled = false, onCheckedChange = {})
                             Text("Start seeding", color = Color.Gray)
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(25.dp),
+                            modifier = Modifier.padding(vertical = 10.dp)
+                        ) {
+                            Checkbox(
+                                checked = isExclusive.value,
+                                onCheckedChange = { isExclusive.value = it }
+                            )
+                            Text("Make this release exclusive (only available to Ultimate users)", color = Color.Gray)
                         }
 
                         OutlinedButton(

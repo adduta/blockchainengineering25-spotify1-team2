@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.musicdao.ui.screens.search
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -123,6 +124,7 @@ class SearchScreenViewModel
                             albumRepository.requestMagnetLink(album.id)
                         } catch (e: Exception) {
                             // Log error if needed
+                            Log.e("SearchScreenViewModel", "Could not fetch the magnetLink")
                         }
                     }
                 }

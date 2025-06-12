@@ -26,7 +26,8 @@ class ReleasePublishBlockRepository
             magnet: String,
             title: String,
             artist: String,
-            releaseDate: String
+            releaseDate: String,
+            isExclusive: Boolean = false
         ): TrustChainBlock? {
             val myPeer = IPv8Android.getInstance().myPeer
             val transaction =
@@ -37,7 +38,8 @@ class ReleasePublishBlockRepository
                     "artist" to artist,
                     "publisher" to myPeer.publicKey.keyToBin().toHex(),
                     "releaseDate" to releaseDate,
-                    "protocolVersion" to Constants.PROTOCOL_VERSION
+                    "protocolVersion" to Constants.PROTOCOL_VERSION,
+                    "isExclusive" to isExclusive
                 )
 
             if (!releasePublishBlockValidator.validateTransaction(transaction)) {
@@ -45,11 +47,21 @@ class ReleasePublishBlockRepository
                 return null
             }
 
-            return musicCommunity.createProposalBlock(
+            Log.d(
+                "ReleasePublishBlockRepository",
+                "Creating ReleasePublishBlock with releaseId: $releaseId, title: $title, " +
+                    "artist: $artist, publisher: ${myPeer.publicKey.keyToBin().toHex()}," +
+                    " releaseDate: $releaseDate, isExclusive: $isExclusive"
+            )
+
+            val result = musicCommunity.createProposalBlock(
                 ReleasePublishBlock.BLOCK_TYPE,
                 transaction,
                 myPeer.publicKey.keyToBin()
             )
+
+            Log.d("ReleasePublishBlockRepository", "Created block: $result")
+            return result
         }
 
         fun toBlock(block: TrustChainBlock): ReleasePublishBlock {
@@ -61,6 +73,8 @@ class ReleasePublishBlockRepository
             val protocolVersion = block.transaction["protocolVersion"] as String
             // Handle old format blocks that might have a magnet link
             val magnet = block.transaction["magnet"] as? String
+            // Handle old format blocks that don't have isExclusive field
+            val isExclusive = block.transaction["isExclusive"] as? Boolean ?: false
 
             return ReleasePublishBlock(
                 releaseId = releaseId,
@@ -69,7 +83,8 @@ class ReleasePublishBlockRepository
                 publisher = publisher,
                 releaseDate = releaseDate,
                 protocolVersion = protocolVersion,
-                magnet = magnet
+                magnet = magnet,
+                isExclusive = isExclusive
             )
         }
     }

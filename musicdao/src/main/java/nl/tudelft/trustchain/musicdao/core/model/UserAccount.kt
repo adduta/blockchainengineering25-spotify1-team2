@@ -2,7 +2,8 @@ package nl.tudelft.trustchain.musicdao.core.model
 
 enum class AccountType {
     BASIC,
-    PRO
+    PRO,
+    ULTIMATE
 }
 
 data class UserAccount(

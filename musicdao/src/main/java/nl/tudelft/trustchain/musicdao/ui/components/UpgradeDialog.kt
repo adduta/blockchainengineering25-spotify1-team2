@@ -22,9 +22,10 @@ import org.bitcoinj.core.Coin
 fun UpgradeDialog(
     onDismiss: () -> Unit,
     onUpgrade: () -> Unit,
-    currentBalance: Coin? = null
+    currentBalance: Coin? = null,
+    isUltimate: Boolean = false
 ) {
-    val requiredAmount = Coin.parseCoin("0.1") // 0.1 BTC required for upgrade
+    val requiredAmount = if (isUltimate) Coin.parseCoin("0.2") else Coin.parseCoin("0.1") // 0.2 BTC for Ultimate, 0.1 BTC for Pro
     val hasEnoughFunds = currentBalance?.isGreaterThan(requiredAmount) ?: false
 
     Dialog(onDismissRequest = onDismiss) {
@@ -64,7 +65,7 @@ fun UpgradeDialog(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Upgrade to Pro",
+                            text = if (isUltimate) "Upgrade to Ultimate" else "Upgrade to Pro",
                             style = MaterialTheme.typography.h5,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colors.primary
@@ -76,7 +77,7 @@ fun UpgradeDialog(
 
                 // Benefits section
                 Text(
-                    text = "Premium Features",
+                    text = if (isUltimate) "Ultimate Features" else "Premium Features",
                     style = MaterialTheme.typography.subtitle1,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colors.onSurface.copy(alpha = 0.87f)
@@ -84,21 +85,39 @@ fun UpgradeDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                BenefitItem(
-                    icon = Icons.Outlined.Star,
-                    title = "Instant Access",
-                    description = "Get immediate access to new releases"
-                )
-                BenefitItem(
-                    icon = Icons.Outlined.Star,
-                    title = "No Waiting Period",
-                    description = "Skip the 7-day waiting period"
-                )
-                BenefitItem(
-                    icon = Icons.Outlined.Star,
-                    title = "Support Artists",
-                    description = "Directly support your favorite artists"
-                )
+                if (isUltimate) {
+                    BenefitItem(
+                        icon = Icons.Outlined.Star,
+                        title = "Exclusive Content Access",
+                        description = "Access exclusive releases from artists"
+                    )
+                    BenefitItem(
+                        icon = Icons.Outlined.Star,
+                        title = "All Pro Features",
+                        description = "Includes all Pro tier benefits"
+                    )
+                    BenefitItem(
+                        icon = Icons.Outlined.Star,
+                        title = "Priority Support",
+                        description = "Get priority support from our team"
+                    )
+                } else {
+                    BenefitItem(
+                        icon = Icons.Outlined.Star,
+                        title = "Instant Access",
+                        description = "Get immediate access to new releases"
+                    )
+                    BenefitItem(
+                        icon = Icons.Outlined.Star,
+                        title = "No Waiting Period",
+                        description = "Skip the 7-day waiting period"
+                    )
+                    BenefitItem(
+                        icon = Icons.Outlined.Star,
+                        title = "Support Artists",
+                        description = "Directly support your favorite artists"
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -122,7 +141,7 @@ fun UpgradeDialog(
                             color = MaterialTheme.colors.primary
                         )
                         Text(
-                            text = "0.1 BTC / month",
+                            text = if (isUltimate) "0.2 BTC / month" else "0.1 BTC / month",
                             style = MaterialTheme.typography.body1,
                             color = MaterialTheme.colors.onSurface.copy(alpha = 0.87f)
                         )

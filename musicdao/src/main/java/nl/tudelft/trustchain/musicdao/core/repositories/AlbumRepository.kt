@@ -32,22 +32,6 @@ class AlbumRepository
         private val musicCommunity: MusicCommunity,
         private val userTierVerifier: UserTierVerifier
     ) {
-        suspend fun getReleaseById(id: String): Album? {
-            val album = database.dao.get(id)?.toAlbum()
-            if (album != null) {
-                if (album.magnet == "access_restricted") {
-                    Log.d("AlbumRepository", "Found album with access_restricted magnet, requesting magnet link")
-                    requestMagnetLink(id)
-                } else if (album.magnet.isEmpty()) {
-                    Log.d("AlbumRepository", "Found album without magnet link, requesting magnet link")
-                    requestMagnetLink(id)
-                } else {
-                    Log.d("AlbumRepository", "Found existing magnet link for release $id")
-                }
-            }
-            return album
-        }
-
         private fun isReleasePastDelayPeriod(releaseDate: String): Boolean {
             try {
                 val releaseInstant = Instant.parse(releaseDate)
@@ -73,38 +57,41 @@ class AlbumRepository
 
             // For each album, check if we need to request the magnet link
             for (album in albumEntities) {
-                if (album.magnet == "access_restricted") {
-                    val isPro = userTierVerifier.isProUser(userPublicKey.hexToBytes())
+                if (album.magnet == "access_restricted" || album.magnet.isEmpty()) {
+                    val userPublicKeyBytes = userPublicKey.hexToBytes()
+                    val isUltimate = userTierVerifier.isUltimateUser(userPublicKeyBytes)
+                    val isPro = userTierVerifier.isProUser(userPublicKeyBytes)
                     val isPastDelay = isReleasePastDelayPeriod(album.releaseDate)
 
-                    if (isPro || isPastDelay) {
-                        Log.d("AlbumRepository", "Found album ${album.id} with access_restricted magnet, requesting magnet link")
+                    if (album.isExclusive) {
+                        if (isUltimate) {
+                            Log.d("AlbumRepository", "Found exclusive album ${album.id}, requesting magnet link for Ultimate user")
+                            val magnetLink = requestMagnetLink(album.id)
+                            if (magnetLink.isNullOrEmpty()) {
+                                Log.w("AlbumRepository", "Failed to get magnet link for exclusive album ${album.id}")
+                                withContext(Dispatchers.IO) {
+                                    database.dao.updateReleaseMagnet(album.id, "", "")
+                                }
+                            }
+                        } else {
+                            Log.d("AlbumRepository", "Found exclusive album ${album.id}, but user (${userPublicKey.take(8)}...) is not Ultimate tier")
+                        }
+                    } else if (isPro || isPastDelay) {
+                        Log.d("AlbumRepository", "Found album ${album.id}, requesting magnet link for Pro user or past delay period")
                         val magnetLink = requestMagnetLink(album.id)
                         if (magnetLink.isNullOrEmpty()) {
+                            Log.w("AlbumRepository", "Failed to get magnet link for album ${album.id}")
                             withContext(Dispatchers.IO) {
                                 database.dao.updateReleaseMagnet(album.id, "", "")
                             }
                         }
-                    }
-                } else if (album.magnet.isEmpty()) {
-                    Log.d("AlbumRepository", "Found album ${album.id} without magnet link, requesting magnet link")
-                    val magnetLink = requestMagnetLink(album.id)
-                    if (magnetLink.isNullOrEmpty()) {
-                        withContext(Dispatchers.IO) {
-                            database.dao.updateReleaseMagnet(album.id, "", "")
-                        }
+                    } else {
+                        Log.d("AlbumRepository", "Found album ${album.id}, but user is not Pro and release is not past delay period")
                     }
                 } else {
-                    Log.d(
-                        "AlbumRepository",
-                        "Found existing magnet link for album ${album.id}: ${album.magnet}"
-                    )
+                    Log.d("AlbumRepository", "Found existing magnet link for album ${album.id}: ${album.magnet}")
                     if (album.infoHash.isNullOrEmpty() && album.magnet.isNotEmpty()) {
-                        Log.d(
-                            "AlbumRepository",
-                            "For album ${album.id}, the magnet link was set," +
-                                " but the info has was not set. So, the infoHash will now be persisted."
-                        )
+                        Log.d("AlbumRepository", "For album ${album.id}, the magnet link was set but infoHash was not. Persisting infoHash.")
                         val infoHash: String = TorrentEngine.magnetToInfoHash(album.magnet) ?: ""
                         withContext(Dispatchers.IO) {
                             database.dao.updateReleaseMagnet(album.id, album.magnet, infoHash)
@@ -136,11 +123,27 @@ class AlbumRepository
 
                     // If no magnet link, request it in background
                     if (entity.magnet.isEmpty()) {
-                        Log.d("AlbumRepository", "No magnet link found for release ${entity.id}, requesting from peers in background")
-                        // Use a more controlled coroutine scope
+                        Log.d("AlbumRepository", "No magnet link found for release ${entity.id}, checking access requirements")
                         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
                             try {
-                                requestMagnetLink(entity.id)
+                                val userPublicKeyBytes = userPublicKey.hexToBytes()
+                                val isUltimate = userTierVerifier.isUltimateUser(userPublicKeyBytes)
+                                val isPro = userTierVerifier.isProUser(userPublicKeyBytes)
+                                val isPastDelay = isReleasePastDelayPeriod(entity.releaseDate)
+
+                                if (entity.isExclusive) {
+                                    if (isUltimate) {
+                                        Log.d("AlbumRepository", "Requesting magnet link for exclusive album ${entity.id} for Ultimate user")
+                                        requestMagnetLink(entity.id)
+                                    } else {
+                                        Log.d("AlbumRepository", "Skipping magnet link request for exclusive album ${entity.id} - user is not Ultimate tier")
+                                    }
+                                } else if (isPro || isPastDelay) {
+                                    Log.d("AlbumRepository", "Requesting magnet link for album ${entity.id} for Pro user or past delay period")
+                                    requestMagnetLink(entity.id)
+                                } else {
+                                    Log.d("AlbumRepository", "Skipping magnet link request for album ${entity.id} - user is not Pro and release is not past delay period")
+                                }
                             } catch (e: Exception) {
                                 Log.e("AlbumRepository", "Error requesting magnet link in background: ${e.message}")
                             }
@@ -164,17 +167,18 @@ class AlbumRepository
             magnet: String,
             title: String,
             artist: String,
-            releaseDate: String
+            releaseDate: String,
+            isExclusive: Boolean = false
         ): Boolean {
             try {
-                // Create and publish the Trustchain block without the magnet link
                 val block =
                     releasePublishBlockRepository.create(
                         releaseId = releaseId,
                         magnet = "",
                         title = title,
                         artist = artist,
-                        releaseDate = releaseDate
+                        releaseDate = releaseDate,
+                        isExclusive = isExclusive
                     )
 
                 if (block != null) {
@@ -203,7 +207,8 @@ class AlbumRepository
                                 root = null,
                                 isDownloaded = false,
                                 infoHash = infoHash,
-                                torrentPath = null
+                                torrentPath = null,
+                                isExclusive = isExclusive
                             )
                         )
                         return true
@@ -293,8 +298,11 @@ class AlbumRepository
             return albums.filter { album ->
                 if (album.magnet == "access_restricted") {
                     val isPro = userTierVerifier.isProUser(userPublicKey.hexToBytes())
+                    val isPastDelay = isReleasePastDelayPeriod(album.releaseDate.toString())
+
+                    // For non-exclusive releases, Pro users or past delay period
                     Log.d("AlbumRepository", "[getAlbumsFromCache] Album ${album.id} is access_restricted, user is PRO: $isPro")
-                    isPro
+                    isPro || isPastDelay
                 } else {
                     true
                 }

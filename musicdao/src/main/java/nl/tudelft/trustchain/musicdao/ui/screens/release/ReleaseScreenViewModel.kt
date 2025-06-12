@@ -52,8 +52,8 @@ class ReleaseScreenViewModel
                 }
         }
 
-        private var releaseLiveData: LiveData<AlbumEntity> = MutableLiveData(null)
-        var saturatedReleaseState: LiveData<Album?> = MutableLiveData()
+        private val _release: MutableStateFlow<Album?> = MutableStateFlow(null)
+        val release: StateFlow<Album?> = _release
 
         private val _torrentState: MutableStateFlow<TorrentStatus?> = MutableStateFlow(null)
         val torrentState: StateFlow<TorrentStatus?> = _torrentState
@@ -61,36 +61,54 @@ class ReleaseScreenViewModel
         private val _accessReason: MutableStateFlow<AccessReason?> = MutableStateFlow(null)
         val accessReason: StateFlow<AccessReason?> = _accessReason
 
+        private val releaseLiveData: LiveData<AlbumEntity> = database.dao.getLiveData(releaseId)
+        val saturatedReleaseState: LiveData<Album> = releaseLiveData.map { it.toAlbum() }
+
         init {
             viewModelScope.launch {
-                releaseLiveData = database.dao.getLiveData(releaseId)
-                saturatedReleaseState = releaseLiveData.map { it.toAlbum() }
+                val albumEntity = database.dao.get(releaseId)
+                _release.value = albumEntity?.toAlbum()
 
-                val release = database.dao.get(releaseId)
-
-                release?.let { _release ->
+                albumEntity?.let { _albumEntity ->
                     // Determine access reason
                     _accessReason.value =
                         when {
-                            _release.magnet == "access_restricted" -> {
+                            _albumEntity.magnet == "access_restricted" || _albumEntity.magnet.isEmpty() -> {
+                                val isUltimate = userTierVerifier.isUltimateUser(musicCommunity.publicKeyHex().hexToBytes())
                                 val isPro = userTierVerifier.isProUser(musicCommunity.publicKeyHex().hexToBytes())
-                                val releaseDate = Instant.parse(_release.releaseDate)
+                                val releaseDate = Instant.parse(_albumEntity.releaseDate)
                                 val sevenDaysAgo = Instant.now().minus(7, ChronoUnit.DAYS)
 
-                                if (isPro || releaseDate.isBefore(sevenDaysAgo)) {
-                                    // Pro users can access immediately
+                                if (_albumEntity.isExclusive) {
+                                    if (isUltimate) {
+                                        // For Ultimate users, request magnet link for exclusive content
+                                        try {
+                                            val magnetLink = albumRepository.requestMagnetLink(_albumEntity.id)
+                                            if (magnetLink != null) {
+                                                val infoHash = TorrentEngine.magnetToInfoHash(magnetLink)
+                                                if (infoHash != null) {
+                                                    database.dao.updateReleaseMagnet(_albumEntity.id, magnetLink, infoHash)
+                                                    AccessReason.DOWNLOADING
+                                                } else {
+                                                    AccessReason.NO_MAGNET
+                                                }
+                                            } else {
+                                                AccessReason.NO_MAGNET
+                                            }
+                                        } catch (e: Exception) {
+                                            AccessReason.DOWNLOAD_ERROR
+                                        }
+                                    } else {
+                                        AccessReason.EXCLUSIVE
+                                    }
+                                } else if (isPro || releaseDate.isBefore(sevenDaysAgo)) {
+                                    // For Pro users or after delay period, request magnet link
                                     try {
-                                        val magnetLink = albumRepository.requestMagnetLink(_release.id)
+                                        val magnetLink = albumRepository.requestMagnetLink(_albumEntity.id)
                                         if (magnetLink != null) {
                                             val infoHash = TorrentEngine.magnetToInfoHash(magnetLink)
-
                                             if (infoHash != null) {
-                                                // Update magnet and infoHash in the database
-                                                database.dao.updateReleaseMagnet(
-                                                    _release.id,
-                                                    magnetLink,
-                                                    infoHash
-                                                )
+                                                database.dao.updateReleaseMagnet(_albumEntity.id, magnetLink, infoHash)
                                                 AccessReason.DOWNLOADING
                                             } else {
                                                 AccessReason.NO_MAGNET
@@ -105,17 +123,17 @@ class ReleaseScreenViewModel
                                     AccessReason.WAITING_PERIOD
                                 }
                             }
-                            _release.magnet.isEmpty() -> AccessReason.NO_MAGNET
-                            !_release.isDownloaded && _release.magnet.isNotEmpty() -> {
+                            _albumEntity.magnet.isEmpty() -> AccessReason.NO_MAGNET
+                            !_albumEntity.isDownloaded && _albumEntity.magnet.isNotEmpty() -> {
                                 try {
                                     // Convert magnet to infoHash if not already set
-                                    if (_release.infoHash == null && _release.magnet.isNotEmpty()) {
-                                        val infoHash = TorrentEngine.magnetToInfoHash(_release.magnet)
+                                    if (_albumEntity.infoHash == null && _albumEntity.magnet.isNotEmpty()) {
+                                        val infoHash = TorrentEngine.magnetToInfoHash(_albumEntity.magnet)
                                         if (infoHash != null) {
-                                            database.dao.updateReleaseMagnet(_release.id, _release.magnet, infoHash)
+                                            database.dao.updateReleaseMagnet(_albumEntity.id, _albumEntity.magnet, infoHash)
                                         }
                                     }
-                                    torrentEngine.download(_release.magnet)
+                                    torrentEngine.download(_albumEntity.magnet)
                                     AccessReason.DOWNLOADING
                                 } catch (e: Exception) {
                                     Log.e("ReleaseScreenViewModel", "Error downloading torrent: ${e.message}")
@@ -126,17 +144,17 @@ class ReleaseScreenViewModel
                         }
 
                     // Skip download for access-restricted releases
-                    if (_release.magnet != "access_restricted") {
-                        if (!_release.isDownloaded && _release.magnet.isNotEmpty()) {
+                    if (_albumEntity.magnet != "access_restricted") {
+                        if (!_albumEntity.isDownloaded && _albumEntity.magnet.isNotEmpty()) {
                             try {
                                 // Ensure infoHash is set before downloading
-                                if (_release.infoHash == null) {
-                                    val infoHash = TorrentEngine.magnetToInfoHash(_release.magnet)
+                                if (_albumEntity.infoHash == null) {
+                                    val infoHash = TorrentEngine.magnetToInfoHash(_albumEntity.magnet)
                                     if (infoHash != null) {
-                                        database.dao.updateReleaseMagnet(_release.id, _release.magnet, infoHash)
+                                        database.dao.updateReleaseMagnet(_albumEntity.id, _albumEntity.magnet, infoHash)
                                     }
                                 }
-                                torrentEngine.download(_release.magnet)
+                                torrentEngine.download(_albumEntity.magnet)
                             } catch (e: Exception) {
                                 Log.e("ReleaseScreenViewModel", "Error downloading torrent: ${e.message}")
                             }
@@ -147,6 +165,8 @@ class ReleaseScreenViewModel
                             try {
                                 // Get latest release data to ensure we have the most recent infoHash
                                 val currentRelease = database.dao.get(releaseId)
+                                Log.d("ReleaseScreenViewModel", "Current release: $currentRelease, infoHash: ${currentRelease.infoHash}")
+
                                 if (currentRelease?.infoHash != null) {
                                     val status = torrentEngine.getTorrentStatus(currentRelease.infoHash)
                                     if (status != null) {
@@ -165,6 +185,7 @@ class ReleaseScreenViewModel
 
         enum class AccessReason {
             RESTRICTED, // Release is restricted (needs pro or waiting period)
+            EXCLUSIVE, // Release is exclusive (needs ultimate)
             NO_MAGNET, // No magnet link available
             DOWNLOADING, // Currently downloading
             DOWNLOAD_ERROR, // Error occurred during download

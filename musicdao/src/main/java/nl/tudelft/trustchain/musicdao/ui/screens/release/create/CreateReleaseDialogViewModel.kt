@@ -17,8 +17,9 @@ class CreateReleaseDialogViewModel
             title: String,
             releaseDate: String,
             uris: List<Uri>,
-            context: Context
+            context: Context,
+            isExclusive: Boolean = false
         ): Boolean {
-            return createReleaseUseCase.invoke(artist, title, releaseDate, uris, context)
+            return createReleaseUseCase.invoke(artist, title, releaseDate, uris, context, isExclusive)
         }
     }

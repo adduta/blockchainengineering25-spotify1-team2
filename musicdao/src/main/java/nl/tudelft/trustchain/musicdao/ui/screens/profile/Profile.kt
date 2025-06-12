@@ -62,6 +62,7 @@ fun Profile(
     val accountType by viewModel.accountType.collectAsState()
     val validUntil by viewModel.validUntil.collectAsState()
     var showUpgradeDialog by remember { mutableStateOf(false) }
+    var showUltimateUpgradeDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier =
@@ -127,6 +128,7 @@ fun Profile(
                             Text(
                                 text =
                                     when (accountType) {
+                                        AccountType.ULTIMATE -> "Ultimate Account"
                                         AccountType.PRO -> "Pro Account"
                                         AccountType.BASIC -> "Basic Account"
                                     },
@@ -134,7 +136,7 @@ fun Profile(
                             )
                         }
 
-                        if (accountType == AccountType.PRO && validUntil != null) {
+                        if ((accountType == AccountType.PRO || accountType == AccountType.ULTIMATE) && validUntil != null) {
                             Spacer(modifier = Modifier.height(8.dp))
                             val formattedDate =
                                 validUntil?.let { instant ->
@@ -151,17 +153,53 @@ fun Profile(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        if (accountType == AccountType.BASIC && viewModel.isOwnProfile()) {
-                            Button(
-                                onClick = { showUpgradeDialog = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                                Text("Upgrade to Pro")
+                        if (viewModel.isOwnProfile()) {
+                            when (accountType) {
+                                AccountType.BASIC -> {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Button(
+                                            onClick = { showUpgradeDialog = true },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Star,
+                                                contentDescription = null,
+                                                modifier = Modifier.padding(end = 8.dp)
+                                            )
+                                            Text("Upgrade to Pro")
+                                        }
+                                        Button(
+                                            onClick = { showUltimateUpgradeDialog = true },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Star,
+                                                contentDescription = null,
+                                                modifier = Modifier.padding(end = 8.dp)
+                                            )
+                                            Text("Upgrade to Ultimate")
+                                        }
+                                    }
+                                }
+                                AccountType.PRO -> {
+                                    Button(
+                                        onClick = { showUltimateUpgradeDialog = true },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(end = 8.dp)
+                                        )
+                                        Text("Upgrade to Ultimate")
+                                    }
+                                }
+                                AccountType.ULTIMATE -> {
+                                    // Ultimate users don't need upgrade button
+                                }
                             }
                         }
                     }
@@ -201,6 +239,43 @@ fun Profile(
                         ProBenefitItem(
                             title = "Support Artists",
                             description = "Directly support your favorite artists"
+                        )
+                    }
+                }
+            }
+
+            if (viewModel.isOwnProfile() && (accountType == AccountType.PRO || accountType == AccountType.BASIC)) {
+                Card(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                    elevation = 4.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Ultimate Benefits",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        UltimateBenefitItem(
+                            title = "All Pro Benefits",
+                            description = "Includes all benefits of Pro account"
+                        )
+
+                        UltimateBenefitItem(
+                            title = "Exclusive Content",
+                            description = "Access to exclusive content from all artists"
+                        )
+
+                        UltimateBenefitItem(
+                            title = "Priority Support",
+                            description = "Get priority support from our team"
                         )
                     }
                 }
@@ -258,6 +333,19 @@ fun Profile(
             currentBalance = currentBalance
         )
     }
+
+    if (showUltimateUpgradeDialog && viewModel.isOwnProfile()) {
+        val currentBalance by bitcoinWalletViewModel.confirmedBalance.collectAsState()
+        UpgradeDialog(
+            onDismiss = { showUltimateUpgradeDialog = false },
+            onUpgrade = {
+                viewModel.upgradeToUltimate()
+                showUltimateUpgradeDialog = false
+            },
+            currentBalance = currentBalance,
+            isUltimate = true
+        )
+    }
 }
 
 @Composable
@@ -276,6 +364,37 @@ private fun ProBenefitItem(
             imageVector = Icons.Outlined.Star,
             contentDescription = null,
             tint = MaterialTheme.colors.primary,
+            modifier = Modifier.padding(end = 8.dp)
+        )
+        Column {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = description,
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun UltimateBenefitItem(
+    title: String,
+    description: String
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Star,
+            contentDescription = null,
+            tint = MaterialTheme.colors.secondary,
             modifier = Modifier.padding(end = 8.dp)
         )
         Column {

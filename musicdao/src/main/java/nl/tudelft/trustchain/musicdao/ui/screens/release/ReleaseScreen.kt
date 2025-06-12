@@ -246,8 +246,8 @@ fun ReleaseScreen(
                                 text =
                                     when (accessReason) {
                                         ReleaseScreenViewModel.AccessReason.RESTRICTED -> "This release is currently restricted"
-                                        ReleaseScreenViewModel.AccessReason.WAITING_PERIOD -> "This release will be available in 7 days"
-                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "This release is not available"
+                                        ReleaseScreenViewModel.AccessReason.WAITING_PERIOD -> "This release will be available soon"
+                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "Something went wrong, try again later"
                                         ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
                                         null -> "Release not available for download"
                                         else -> "Loading..."

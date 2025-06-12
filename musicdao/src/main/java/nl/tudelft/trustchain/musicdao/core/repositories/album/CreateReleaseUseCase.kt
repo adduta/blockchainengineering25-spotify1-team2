@@ -24,10 +24,12 @@ class CreateReleaseUseCase
             title: String,
             releaseDate: String,
             uris: List<Uri>,
-            context: Context
+            context: Context,
+            isExclusive: Boolean = false
         ): Boolean {
             val releaseId = UUID.randomUUID().toString()
             Log.d("MusicDao", "CreateReleaseUseCase: $releaseId")
+            Log.d("MusicDao", "CreateReleaseUseCase: $artist, $title, $releaseDate, $uris, isExclusive: $isExclusive")
 
             val root = torrentEngine.simulateDownload(context, uris)
             if (root == null) {
@@ -42,7 +44,8 @@ class CreateReleaseUseCase
                     magnet = magnet,
                     title = title,
                     artist = artist,
-                    releaseDate = releaseDate
+                    releaseDate = releaseDate,
+                    isExclusive = isExclusive
                 )
             if (!publishResult) {
                 Log.d("MusicDao", "Release: publishing to network failed")
