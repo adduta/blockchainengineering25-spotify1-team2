@@ -118,7 +118,21 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
                     Log.d("MusicDao", "Wallet (2): failed to parse $coinsAmount")
                     continue
                 }
+            val coins =
+                try {
+                    BigDecimal(coinsAmount.toDouble())
+                } catch (e: NumberFormatException) {
+                    Log.d("MusicDao", "Wallet (2): failed to parse $coinsAmount")
+                    continue
+                }
             val satoshiAmount = (coins * SATS_PER_BITCOIN).toLong()
+            val targetAddress =
+                try {
+                    Address.fromString(config.networkParams, publicKey)
+                } catch (e: Exception) {
+                    Log.d("MusicDao", "Wallet (3): failed to parse $publicKey")
+                    continue
+                }
             val targetAddress =
                 try {
                     Address.fromString(config.networkParams, publicKey)

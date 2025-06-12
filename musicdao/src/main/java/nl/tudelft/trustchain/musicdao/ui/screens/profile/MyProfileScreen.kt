@@ -10,18 +10,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import nl.tudelft.trustchain.musicdao.ui.components.EmptyState
+import nl.tudelft.trustchain.musicdao.ui.screens.wallet.BitcoinWalletViewModel
 
 @ExperimentalMaterialApi
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MyProfileScreen(
     navController: NavController,
-    profileScreenViewModel: MyProfileScreenViewModel
+    profileScreenViewModel: MyProfileScreenViewModel,
+    bitcoinWalletViewModel: BitcoinWalletViewModel
 ) {
     val profile = profileScreenViewModel.profile.collectAsState()
 
     profile.value?.let {
-        Profile(it, navController = navController)
+        Profile(it, navController = navController, bitcoinWalletViewModel = bitcoinWalletViewModel)
     } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         EmptyState(
             firstLine = "You have not made a profile yet.",
