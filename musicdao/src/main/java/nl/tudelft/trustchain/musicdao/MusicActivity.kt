@@ -301,11 +301,6 @@ class MusicActivity : AppCompatActivity() {
                 Log.w("DonationWallet", "No blocks found for type 'DONATION_WALLET_ADDRESS'")
                 return ""
             }
-        val latest =
-            blocks.maxByOrNull { it.timestamp } ?: run {
-                Log.w("DonationWallet", "No blocks found for type 'DONATION_WALLET_ADDRESS'")
-                return ""
-            }
 
         val address = latest.transaction["address"] as? String
         Log.d("DonationWallet", "Latest block address: $address")
@@ -323,17 +318,17 @@ class MusicActivity : AppCompatActivity() {
                     val walletAddress = fetchWalletAddressFromSharedLocation()
                     Log.d("DonationWallet", "Fetched wallet address from shared location: $walletAddress")
                     donationWalletManager.globalDonationAddress = walletAddress
-        walletAddressJob =
-            CoroutineScope(Dispatchers.IO).launch {
-                while (isActive) {
-                    val walletAddress = fetchWalletAddressFromSharedLocation()
-                    Log.d("DonationWallet", "Fetched wallet address from shared location: $walletAddress")
-                    donationWalletManager.globalDonationAddress = walletAddress
+                    walletAddressJob =
+                        CoroutineScope(Dispatchers.IO).launch {
+                            while (isActive) {
+                                val walletAddress = fetchWalletAddressFromSharedLocation()
+                                Log.d("DonationWallet", "Fetched wallet address from shared location: $walletAddress")
+                                donationWalletManager.globalDonationAddress = walletAddress
 
-                    // Delay for a specified interval before fetching again
-                    delay(1000) // Fetch every 5 seconds (adjust as needed)
-                }
-            }
+                                // Delay for a specified interval before fetching again
+                                delay(1000) // Fetch every 5 seconds (adjust as needed)
+                            }
+                        }
                     // Delay for a specified interval before fetching again
                     delay(1000) // Fetch every 5 seconds (adjust as needed)
                 }
@@ -377,11 +372,6 @@ class MusicActivity : AppCompatActivity() {
                 Log.w("DonationWallet", "No blocks found for type 'DONATION_WALLET_BALANCE'")
                 return Coin.ZERO.toString()
             }
-        val latest =
-            blocks.maxByOrNull { it.timestamp } ?: run {
-                Log.w("DonationWallet", "No blocks found for type 'DONATION_WALLET_BALANCE'")
-                return Coin.ZERO.toString()
-            }
 
         val balance = latest.transaction["balance"] as? String
         Log.d("DonationWallet", "Latest block balance: $balance")
@@ -399,17 +389,17 @@ class MusicActivity : AppCompatActivity() {
                     val walletBalance = fetchWalletBalanceFromSharedLocation()
                     Log.d("DonationWallet", "Fetched wallet balance from shared location: $walletBalance")
                     donationWalletManager.globalDonationBalance = Coin.valueOf(walletBalance.toLong())
-        walletBalanceJob =
-            CoroutineScope(Dispatchers.IO).launch {
-                while (isActive) {
-                    val walletBalance = fetchWalletBalanceFromSharedLocation()
-                    Log.d("DonationWallet", "Fetched wallet balance from shared location: $walletBalance")
-                    donationWalletManager.globalDonationBalance = Coin.valueOf(walletBalance.toLong())
+                    walletBalanceJob =
+                        CoroutineScope(Dispatchers.IO).launch {
+                            while (isActive) {
+                                val walletBalance = fetchWalletBalanceFromSharedLocation()
+                                Log.d("DonationWallet", "Fetched wallet balance from shared location: $walletBalance")
+                                donationWalletManager.globalDonationBalance = Coin.valueOf(walletBalance.toLong())
 
-                    // Delay for a specified interval before fetching again
-                    delay(1000) // Fetch every 5 seconds (adjust as needed)
-                }
-            }
+                                // Delay for a specified interval before fetching again
+                                delay(1000) // Fetch every 5 seconds (adjust as needed)
+                            }
+                        }
                     // Delay for a specified interval before fetching again
                     delay(1000) // Fetch every 5 seconds (adjust as needed)
                 }
