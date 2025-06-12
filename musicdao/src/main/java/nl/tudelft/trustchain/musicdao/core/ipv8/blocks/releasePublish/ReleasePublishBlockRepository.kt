@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.musicdao.core.ipv8.blocks.releasePublish
 
+import android.util.Log
 import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.Constants
 import nl.tudelft.ipv8.android.IPv8Android
@@ -31,7 +32,7 @@ class ReleasePublishBlockRepository
             val transaction =
                 mutableMapOf(
                     "releaseId" to releaseId,
-                    "magnet" to magnet,
+                    "magnet" to "access_restricted",
                     "title" to title,
                     "artist" to artist,
                     "publisher" to myPeer.publicKey.keyToBin().toHex(),
@@ -40,6 +41,7 @@ class ReleasePublishBlockRepository
                 )
 
             if (!releasePublishBlockValidator.validateTransaction(transaction)) {
+                Log.d("ReleasePublishBlockRepository", "Invalid transaction data")
                 return null
             }
 
@@ -52,21 +54,22 @@ class ReleasePublishBlockRepository
 
         fun toBlock(block: TrustChainBlock): ReleasePublishBlock {
             val releaseId = block.transaction["releaseId"] as String
-            val magnet = block.transaction["magnet"] as String
             val title = block.transaction["title"] as String
             val artist = block.transaction["artist"] as String
             val publisher = block.transaction["publisher"] as String
             val releaseDate = block.transaction["releaseDate"] as String
             val protocolVersion = block.transaction["protocolVersion"] as String
+            // Handle old format blocks that might have a magnet link
+            val magnet = block.transaction["magnet"] as? String
 
             return ReleasePublishBlock(
                 releaseId = releaseId,
-                magnet = magnet,
                 title = title,
                 artist = artist,
                 publisher = publisher,
                 releaseDate = releaseDate,
-                protocolVersion = protocolVersion
+                protocolVersion = protocolVersion,
+                magnet = magnet
             )
         }
     }

@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -211,10 +212,66 @@ fun ReleaseScreen(
             }
             if (state == 1) {
                 val current = torrentStatus
-                if (current != null) {
-                    TorrentStatusScreen(current)
-                } else {
-                    Text("Could not find torrent.")
+                val accessReason = viewModel.accessReason.collectAsState().value
+
+                when {
+                    current != null -> {
+                        TorrentStatusScreen(current)
+                    }
+                    accessReason == ReleaseScreenViewModel.AccessReason.DOWNLOADING -> {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Initializing torrent...",
+                                style = MaterialTheme.typography.h6
+                            )
+                        }
+                    }
+                    else -> {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text =
+                                    when (accessReason) {
+                                        ReleaseScreenViewModel.AccessReason.RESTRICTED -> "This release is currently restricted"
+                                        ReleaseScreenViewModel.AccessReason.WAITING_PERIOD -> "This release will be available in 7 days"
+                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "This release is not available"
+                                        ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
+                                        null -> "Release not available for download"
+                                        else -> "Loading..."
+                                    },
+                                style = MaterialTheme.typography.h6,
+                                color = MaterialTheme.colors.error
+                            )
+                            if (accessReason == ReleaseScreenViewModel.AccessReason.RESTRICTED) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Upgrade to Pro to access this release immediately, or wait for the release period to end",
+                                    style = MaterialTheme.typography.body2,
+                                    textAlign = TextAlign.Center
+                                )
+                            } else if (accessReason == ReleaseScreenViewModel.AccessReason.WAITING_PERIOD) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Upgrade to Pro to access this release immediately",
+                                    style = MaterialTheme.typography.body2,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

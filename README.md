@@ -170,3 +170,87 @@ A user can publish a Release (which is an album/EP/single/...), after which the 
 Video 1: <a href="doc/musicdao/thesis2.mp4">Load example.</a> This uses a default magnet link for an album that has a decent amount of peers. The user submits the metadata and the block gets proposed and signed. Then playback.
 
 Video 2: <a href="doc/musicdao/thesis3.mp4">Share track.</a> Note: as a fresh magnet link is generated in this video, there is only 1 peer. For this reason, it will be difficult to obtain the metadata of the magnet link (cold start issues) so the video stops there.
+
+## User Account Hierarchy Architecture
+
+The TrustChain Super App implements a sophisticated user account hierarchy system that manages different user tiers and their associated permissions. Below is a detailed explanation of how the system works:
+
+### Account Types
+- **Basic Account**: Default account type for all users
+- **Pro Account**: Premium account type with additional features and early access to content
+
+### Architecture Diagram
+```mermaid
+graph TD
+    A[User Account] --> B[Account Type]
+    B --> C[Basic]
+    B --> D[Pro]
+    
+    E[UserTierService] --> F[UserTierBlockRepository]
+    F --> G[TrustChain Store]
+    
+    H[UserTierVerifier] --> F
+    H --> I[Release Access Control]
+    
+    J[Profile Screen] --> E
+    J --> H
+    
+    K[Bitcoin Wallet] --> E
+```
+
+### Key Components
+
+1. **User Account Model**
+   - Defined in `UserAccount.kt`
+   - Contains user ID, account type, and creation timestamp
+   - Supports two account types: BASIC and PRO
+
+2. **User Tier Service**
+   - Manages account upgrades and downgrades
+   - Handles Bitcoin payments for Pro account upgrades
+   - Creates and manages tier blocks in the TrustChain
+
+3. **User Tier Block Repository**
+   - Stores and retrieves user tier information in TrustChain blocks
+   - Manages tier validity periods
+   - Handles block creation and verification
+
+4. **User Tier Verifier**
+   - Verifies user's current tier status
+   - Controls access to premium features
+   - Integrates with release access control
+
+5. **TrustChain Integration**
+   - Uses TrustChain blocks to store tier information
+   - Ensures decentralized and tamper-proof tier management
+   - Maintains tier history and validity periods
+
+### Feature Access Control
+
+The system implements a tier-based access control mechanism:
+
+1. **Basic Users**
+   - Access to standard features
+   - Delayed access to new releases (7-day delay)
+   - Limited functionality
+
+2. **Pro Users**
+   - Early access to new releases
+   - Premium features
+   - Extended functionality
+   - Time-limited access (configurable duration)
+
+### Payment Integration
+
+- Pro account upgrades are processed through Bitcoin payments
+- Payment verification is handled by the Bitcoin wallet service
+- Successful payments trigger tier block creation in TrustChain
+
+### Security Features
+
+- Tier information is stored in TrustChain blocks for immutability
+- User verification through public key authentication
+- Time-based access control for premium features
+- Secure payment processing through Bitcoin integration
+
+This architecture ensures a secure, decentralized, and scalable user account management system that integrates seamlessly with the TrustChain ecosystem.

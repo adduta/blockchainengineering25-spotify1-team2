@@ -4,6 +4,7 @@ import android.util.Log
 import kotlinx.coroutines.DelicateCoroutinesApi
 import nl.tudelft.trustchain.musicdao.CachePath
 import nl.tudelft.trustchain.musicdao.core.repositories.AlbumRepository
+import nl.tudelft.trustchain.musicdao.core.repositories.ReleaseRepository
 import nl.tudelft.trustchain.musicdao.core.torrent.TorrentEngine
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
@@ -19,8 +20,12 @@ class BatchPublisher
         val albumRepository: AlbumRepository
     ) {
         @OptIn(DelicateCoroutinesApi::class)
-        suspend fun publish(file: File) {
-            val currentAlbums = albumRepository.getAlbums()
+        suspend fun publish(
+            file: File,
+            userPublicKey: String,
+            releaseRepository: ReleaseRepository
+        ) {
+            val currentAlbums = albumRepository.getAlbums(userPublicKey, releaseRepository)
 
             if (!file.exists()) {
                 Log.d("MusicDao", "BatchPublisher: file not found $file")
