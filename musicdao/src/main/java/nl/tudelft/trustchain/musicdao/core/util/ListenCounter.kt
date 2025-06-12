@@ -42,4 +42,10 @@ object ListenCounter {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(COUNTS_KEY, Gson().toJson(listenCounts)).apply()
     }
+
+    fun clearAllCounts(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+        listenCounts.clear()
+    }
 } 

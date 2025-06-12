@@ -39,6 +39,8 @@ import nl.tudelft.trustchain.musicdao.core.coin.WalletManager
 import javax.inject.Inject
 import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.attestation.trustchain.ANY_COUNTERPARTY_PK
+import nl.tudelft.trustchain.musicdao.core.util.ListenCounter
+import java.util.Date
 
 /**
  * This maintains the interactions between the UI and seeding/trust-chain
@@ -84,6 +86,8 @@ class MusicActivity : AppCompatActivity() {
 
     private var walletAddressJob: Job? = null
     private var walletBalanceJob: Job? = null
+    private var listenCountJob: Job? = null
+    private var lotteryJob: Job? = null
     @DelicateCoroutinesApi
     @ExperimentalAnimationApi
     @ExperimentalFoundationApi
@@ -103,11 +107,12 @@ class MusicActivity : AppCompatActivity() {
                 donationWalletManager.start() // Only the leader starts the wallet
                 startSharingWalletAddress() // Start sharing the address continuously
                 startSharingWalletBalance() // Start sharing the balance continuously
-                donationWalletManager.startLottery()
+                startLottery()
             } else {
                 Log.d("DonationWallet", "User is not the designated leader.")
                 startFetchingWalletAddress()
                 startFetchingWalletBalance()
+                startSharingListenCount()
             }
         }
 
@@ -212,6 +217,8 @@ class MusicActivity : AppCompatActivity() {
         // Cancel the job when the activity is destroyed
         walletAddressJob?.cancel()
         walletBalanceJob?.cancel()
+        listenCountJob?.cancel()
+        lotteryJob?.cancel()
     }
 
     private val mConnection =
@@ -318,20 +325,21 @@ class MusicActivity : AppCompatActivity() {
 
     private fun startSharingWalletAddress() {
         walletAddressJob = CoroutineScope(Dispatchers.IO).launch {
-            val walletAddress = donationWalletManager.getDonationAddress()
-            val tx = mapOf(
-                "address" to walletAddress
-            )
-            // Log the transaction map
-            Log.d("DonationWallet", "Transaction map: $tx")
-
-            // Create a proposal block with ANY_COUNTERPARTY_PK to broadcast to all peers
-            val result = musicCommunity.createProposalBlock(
-                "DONATION_WALLET_ADDRESS",
-                tx,
-                ANY_COUNTERPARTY_PK // Use ANY_COUNTERPARTY_PK instead of specific peer
-            )
             while (isActive) {
+                val walletAddress = donationWalletManager.getDonationAddress()
+                val tx = mapOf(
+                    "address" to walletAddress
+                )
+                // Log the transaction map
+                Log.d("DonationWallet", "Transaction map: $tx")
+
+                // Create a proposal block with ANY_COUNTERPARTY_PK to broadcast to all peers
+                val result = musicCommunity.createProposalBlock(
+                    "DONATION_WALLET_ADDRESS",
+                    tx,
+                    ANY_COUNTERPARTY_PK // Use ANY_COUNTERPARTY_PK instead of specific peer
+                )
+            
                 musicCommunity.sendBlock(result, ttl = 2)
                 Log.d("DonationWallet", "Wallet address shared: $walletAddress")
                 delay(5000) // Adjust the delay as needed (e.g., every 5 seconds)
@@ -392,6 +400,65 @@ class MusicActivity : AppCompatActivity() {
                 musicCommunity.sendBlock(result, ttl = 2)
                 Log.d("DonationWallet", "Wallet balance shared: $walletBalance")
                 delay(5000) // Adjust the delay as needed (e.g., every 5 seconds)
+            }
+        }
+    }
+
+    private fun startSharingListenCount() {
+        listenCountJob = CoroutineScope(Dispatchers.IO).launch {
+            while (isActive) {
+                val listenCount = ListenCounter.getAllCounts(this@MusicActivity.applicationContext)
+                val tx = mapOf(
+                    "listenCount" to listenCount
+                )
+                // Log the transaction map
+                Log.d("ListenCount", "Transaction map: $tx")
+
+                // Create a proposal block with ANY_COUNTERPARTY_PK to broadcast to all peers
+                val result = musicCommunity.createProposalBlock(
+                    "LISTEN_COUNT",
+                    tx,
+                    ANY_COUNTERPARTY_PK // Use ANY_COUNTERPARTY_PK instead of specific peer
+                )
+
+                musicCommunity.sendBlock(result, ttl = 2)
+                Log.d("ListenCount", "Listen count shared: $listenCount")
+                ListenCounter.clearAllCounts(this@MusicActivity.applicationContext)
+                delay(5000) // Adjust the delay as needed (e.g., every 5 seconds)
+            }
+        }
+    }
+
+    private fun aggregateListenCounts(beginTimestamp: Date, endTimestamp: Date): Map<String, Int> {
+        val blocks = musicCommunity.database.getBlocksWithType("LISTEN_COUNT")
+        Log.d("ListenCount", "Retrieved blocks: $blocks")
+    
+        val filteredBlocks = blocks.filter { it.timestamp >= beginTimestamp && it.timestamp <= endTimestamp }
+        Log.d("ListenCount", "Filtered blocks: $filteredBlocks")
+    
+        val listenCounts = filteredBlocks.mapNotNull {
+            it.transaction["listenCount"] as? Map<String, Int>
+        }
+    
+        val aggregatedCounts = mutableMapOf<String, Int>()
+        for (map in listenCounts) {
+            for ((key, value) in map) {
+                aggregatedCounts[key] = aggregatedCounts.getOrDefault(key, 0) + value
+            }
+        }
+    
+        Log.d("ListenCount", "Aggregated listen counts: $aggregatedCounts")
+        return aggregatedCounts
+    }
+
+
+    private fun startLottery() {
+        lotteryJob = CoroutineScope(Dispatchers.IO).launch {
+            while (isActive) {
+                val listenCounts = aggregateListenCounts(beginTimestamp = Date(donationWalletManager.lastLotteryTimestamp), endTimestamp = Date(System.currentTimeMillis()))
+                donationWalletManager.runLottery(listenCounts)
+                donationWalletManager.lastLotteryTimestamp = System.currentTimeMillis()
+                delay(10000) // Adjust the delay as needed (e.g., every 10 seconds)
             }
         }
     }

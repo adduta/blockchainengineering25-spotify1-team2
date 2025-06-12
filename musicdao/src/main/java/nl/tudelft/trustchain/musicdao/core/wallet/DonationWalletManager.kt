@@ -40,6 +40,7 @@ class DonationWalletManager
         private lateinit var walletKit: WalletAppKit
         private var lotteryJob: Job? = null
         private lateinit var walletService: WalletService
+        var lastLotteryTimestamp: Long = 0
 
         val onSetupCompletedListeners = mutableListOf<() -> Unit>()
 
@@ -120,73 +121,60 @@ class DonationWalletManager
             return walletKit.wallet().balance
         }
 
-        fun startLottery() {
+        fun runLottery(listenCounts: Map<String, Int>) {
             if (!::walletKit.isInitialized) {
                 Log.e("DonationWalletLottery", "Cannot start lottery: Wallet not initialized")
                 return
             }
-
-            lotteryJob?.cancel() // Cancel any existing lottery job
-
-            lotteryJob =
-                CoroutineScope(Dispatchers.IO).launch {
-                    while (isActive) {
-                        try {
-                            // Request money from faucet
-                            if (!walletKit.isRunning || walletKit.wallet() == null) {
-                                Log.d("DonationWalletLottery", "Waiting for wallet to be ready...")
-                                delay(10000)
-                                continue
-                            }
-
-                            // Get current balance
-                            val balance = walletService.confirmedBalance()
-                            if (balance == null) {
-                                Log.i("DonationWalletLottery", "The balance is null for distribution")
-                                delay(10000) // Wait 10 seconds before next attempt
-                                continue
-                            }
-
-                            Log.e("DonationWalletLottery", "Current balance is ${balance.toPlainString()}")
-
-                            val peerGroup = walletKit.peerGroup()
-                            val pendingTxs = walletKit.wallet().pendingTransactions
-                            Log.d("DonationWalletLottery", "Number of pending transactions ${pendingTxs.size}")
-                            for (tx in pendingTxs) {
-                                peerGroup.broadcastTransaction(tx)
-                                val confidence = tx.confidence
-                            }
-
-                            // Get all artists
-                            val artists = artistRepository.getArtists()
-                            if (artists.isEmpty()) {
-                                Log.i("DonationWalletLottery", "No artists found to distribute donations")
-                                delay(10000) // Wait 10 seconds before next attempt
-                                continue
-                            }
-
-                            val addressStringList = mutableListOf<String>()
-                            artists.forEach { artist -> addressStringList.add(artist.bitcoinAddress) }
-
-                            val target = balance.value
-
-                            // Calculate amount per artist (1/n of total balance)
-                            //val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
-
-                            val result = walletService.createBatchSpendExact(addressStringList, target)
-                            Log.i("DonationWalletLottery", "Each artist receives: ${result.second}")
-                            Log.i("DonationWalletLottery", "Money distributed to artists without fee: ${result.second * artists.size}")
-
-                            walletService.sendTransaction(result.first)
-
-
-                        } catch (e: Exception) {
-                            Log.e("DonationWalletLottery", "Error in lottery distribution: ${e.message}")
-                        }
-
-                        delay(10000) // Wait 10 seconds before next distribution
-                    }
+            try {
+                if (!walletKit.isRunning || walletKit.wallet() == null) {
+                    Log.d("DonationWalletLottery", "Waiting for wallet to be ready...")
+                    return
                 }
+
+                // Get current balance
+                val balance = walletService.confirmedBalance()
+                if (balance == null) {
+                    Log.i("DonationWalletLottery", "The balance is null for distribution")
+                    return
+                }
+
+                Log.e("DonationWalletLottery", "Current balance is ${balance.toPlainString()}")
+
+                val peerGroup = walletKit.peerGroup()
+                val pendingTxs = walletKit.wallet().pendingTransactions
+                Log.d("DonationWalletLottery", "Number of pending transactions ${pendingTxs.size}")
+                for (tx in pendingTxs) {
+                    peerGroup.broadcastTransaction(tx)
+                    val confidence = tx.confidence
+                }
+
+                // Get all artists
+                val artists = artistRepository.getArtists()
+                if (artists.isEmpty()) {
+                    Log.i("DonationWalletLottery", "No artists found to distribute donations")
+                    return
+                }
+
+                val addressStringList = mutableListOf<String>()
+                artists.forEach { artist -> addressStringList.add(artist.bitcoinAddress) }
+
+                val target = balance.value
+
+                // Calculate amount per artist (1/n of total balance)
+                //val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
+
+                val result = walletService.createBatchSpendExact(addressStringList, target)
+                Log.i("DonationWalletLottery", "Each artist receives: ${result.second}")
+                Log.i("DonationWalletLottery", "Money distributed to artists without fee: ${result.second * artists.size}")
+
+                walletService.sendTransaction(result.first)
+
+
+            } catch (e: Exception) {
+                Log.e("DonationWalletLottery", "Error in lottery distribution: ${e.message}")
+            }
+
         }
 
         // Stop method to clean up resources
