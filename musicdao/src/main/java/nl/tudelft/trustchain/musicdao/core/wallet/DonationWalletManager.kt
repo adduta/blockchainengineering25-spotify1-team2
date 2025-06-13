@@ -210,9 +210,13 @@ class DonationWalletManager
                 // Calculate amount per artist (1/n of total balance)
                 // val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
 
-                val (tx, paidArtists, skippedArtists) = walletService.createBatchSpendExactWeighted(this.allListenCounts.toMutableMap(), target)
-                Log.i("DonationWalletLottery", "Paid artists: ${paidArtists}")
-                Log.i("DonationWalletLottery", "Skipped artists: ${skippedArtists}")
+                val (tx, paidArtists, skippedArtists) =
+                    walletService.createBatchSpendExactWeighted(
+                        this.allListenCounts.toMutableMap(),
+                        target
+                    )
+                Log.i("DonationWalletLottery", "Paid artists: $paidArtists")
+                Log.i("DonationWalletLottery", "Skipped artists: $skippedArtists")
 
                 paidArtists.keys.forEach { artist ->
                     this.allListenCounts[artist] = 0
