@@ -212,6 +212,53 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
         return Pair(finalTx, bestAmount)
     }
 
+    fun createBatchSpendExactWeighted(
+        listenCounts: Map<String, Int>,
+        target: Long,
+        minPerRecipient: Long = 5000L,
+        feeBuffer: Long = 3000L
+    ): Triple<Transaction, Map<String, Long>, Map<String, Long>> {
+        val totalWeight = listenCounts.values.sum()
+        Log.d("DonationWalletLottery", "Total weight: $totalWeight")
+        
+        var payouts = listenCounts.mapValues { (_, count) ->
+            ((target * count.toDouble()) / totalWeight).toLong()
+        }
+        Log.d("DonationWalletLottery", "Initial payouts: $payouts")
+    
+        while (true) {
+            // Filter out artists whose payout is too small
+            val (valid, invalid) = payouts.entries.partition { it.value >= minPerRecipient }
+            val payoutsFiltered = valid.associate { it.toPair() }
+            val skipped = invalid.associate { it.toPair() }
+            Log.d("DonationWalletLottery", "Valid payouts: $payoutsFiltered")
+            Log.d("DonationWalletLottery", "Skipped payouts (too low): $skipped")
+    
+            try {
+                val tx = Transaction(config.networkParams)
+                for ((artist, amount) in payoutsFiltered) {
+                    val address = Address.fromString(config.networkParams, artist)
+                    tx.addOutput(Coin.valueOf(amount), address)
+                }
+    
+                val fee = estimateFee(tx)
+                Log.d("DonationWalletLottery", "Estimated fee: $fee")
+    
+                val finalTx = Transaction(config.networkParams)
+                for ((artist, amount) in payoutsFiltered) {
+                    val address = Address.fromString(config.networkParams, artist)
+                    finalTx.addOutput(Coin.valueOf(amount), address)
+                }
+                return Triple(finalTx, payoutsFiltered, skipped)
+            } catch (e: Exception) {
+                Log.d("DonationWalletLottery", "Fee estimation failed, reducing payouts and retrying: ${e}")
+                payouts = payouts.mapValues { (_, amount) ->
+                    (amount - 100000).coerceAtLeast(0) // prevent negative values
+                }
+            }
+        }
+    }
+    
     /**
      * Query the faucet to the default protocol address
      * @return whether request was successfully or not

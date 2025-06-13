@@ -34,6 +34,7 @@ class DonationWalletManager
         private lateinit var walletKit: WalletAppKit
         private var lotteryJob: Job? = null
         private lateinit var walletService: WalletService
+        private var allListenCounts: MutableMap<String, Int> = mutableMapOf()
         var lastLotteryTimestamp: Long = 0
 
         val onSetupCompletedListeners = mutableListOf<() -> Unit>()
@@ -115,7 +116,7 @@ class DonationWalletManager
             return walletKit.wallet().balance
         }
 
-        fun runLottery(listenCounts: Map<String, Int>) {
+        fun runLottery() {
             if (!::walletKit.isInitialized) {
                 Log.e("DonationWalletLottery", "Cannot start lottery: Wallet not initialized")
                 return
@@ -140,7 +141,6 @@ class DonationWalletManager
                 Log.d("DonationWalletLottery", "Number of pending transactions ${pendingTxs.size}")
                 for (tx in pendingTxs) {
                     peerGroup.broadcastTransaction(tx)
-                    val confidence = tx.confidence
                 }
 
                 // Get all artists
@@ -163,6 +163,62 @@ class DonationWalletManager
                 Log.i("DonationWalletLottery", "Money distributed to artists without fee: ${result.second * artists.size}")
 
                 walletService.sendTransaction(result.first)
+            } catch (e: Exception) {
+                Log.e("DonationWalletLottery", "Error in lottery distribution: ${e.message}")
+            }
+        }
+
+        suspend fun runWeightedLottery(listenCounts: Map<String, Int>) {
+            if (!::walletKit.isInitialized) {
+                Log.e("DonationWalletLottery", "Cannot start lottery: Wallet not initialized")
+                return
+            }
+            try {
+                if (!walletKit.isRunning || walletKit.wallet() == null) {
+                    Log.d("DonationWalletLottery", "Waiting for wallet to be ready...")
+                    return
+                }
+
+                for ((key, value) in listenCounts) {
+                    val bitcoinAddress = artistRepository.getArtist(key)?.bitcoinAddress as String
+                    this.allListenCounts[bitcoinAddress] = this.allListenCounts.getOrDefault(bitcoinAddress, 0) + value
+                }
+
+                // Get current balance
+                val balance = walletService.confirmedBalance()
+                if (balance == null) {
+                    Log.i("DonationWalletLottery", "The balance is null for distribution")
+                    return
+                }
+
+                Log.e("DonationWalletLottery", "Current balance is ${balance.toPlainString()}")
+
+                val peerGroup = walletKit.peerGroup()
+                val pendingTxs = walletKit.wallet().pendingTransactions
+                Log.d("DonationWalletLottery", "Number of pending transactions ${pendingTxs.size}")
+                for (tx in pendingTxs) {
+                    peerGroup.broadcastTransaction(tx)
+                }
+
+                if (this.allListenCounts.values.all { it == 0 }) {
+                    Log.i("DonationWalletLottery", "No artist found with non zero weight")
+                    return
+                }
+
+                val target = balance.value
+
+                // Calculate amount per artist (1/n of total balance)
+                // val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
+
+                val (tx, paidArtists, skippedArtists) = walletService.createBatchSpendExactWeighted(this.allListenCounts.toMutableMap(), target)
+                Log.i("DonationWalletLottery", "Paid artists: ${paidArtists}")
+                Log.i("DonationWalletLottery", "Skipped artists: ${skippedArtists}")
+
+                paidArtists.keys.forEach { artist ->
+                    this.allListenCounts[artist] = 0
+                }
+
+                walletService.sendTransaction(tx)
             } catch (e: Exception) {
                 Log.e("DonationWalletLottery", "Error in lottery distribution: ${e.message}")
             }

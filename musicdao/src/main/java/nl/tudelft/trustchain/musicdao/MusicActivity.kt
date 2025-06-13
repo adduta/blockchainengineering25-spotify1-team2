@@ -112,8 +112,9 @@ class MusicActivity : AppCompatActivity() {
                 Log.d("DonationWallet", "User is not the designated leader.")
                 startFetchingWalletAddress()
                 startFetchingWalletBalance()
-                startSharingListenCount()
             }
+
+            startSharingListenCount()
         }
 
         iterativelyFetchReleases()
@@ -492,9 +493,9 @@ class MusicActivity : AppCompatActivity() {
                             beginTimestamp = Date(donationWalletManager.lastLotteryTimestamp),
                             endTimestamp = Date(System.currentTimeMillis())
                         )
-                    donationWalletManager.runLottery(listenCounts)
+                    donationWalletManager.runWeightedLottery(listenCounts)
                     donationWalletManager.lastLotteryTimestamp = System.currentTimeMillis()
-                    delay(10000)
+                    delay(60000)
                 }
             }
     }
