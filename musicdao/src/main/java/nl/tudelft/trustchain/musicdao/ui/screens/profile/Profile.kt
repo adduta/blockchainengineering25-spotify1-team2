@@ -62,6 +62,7 @@ fun Profile(
     val accountType by viewModel.accountType.collectAsState()
     val validUntil by viewModel.validUntil.collectAsState()
     var showUpgradeDialog by remember { mutableStateOf(false) }
+    val donationAddress by bitcoinWalletViewModel.donationAddress.collectAsState()
 
     Column(
         modifier =
@@ -153,6 +154,7 @@ fun Profile(
 
                         if (accountType == AccountType.BASIC && viewModel.isOwnProfile()) {
                             Button(
+                                enabled = donationAddress != "",
                                 onClick = { showUpgradeDialog = true },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
