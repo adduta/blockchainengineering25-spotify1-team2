@@ -2,6 +2,7 @@ package nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier
 
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
 import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
+import android.util.Log
 import javax.inject.Inject
 
 class UserTierBlockRepository
@@ -30,11 +31,16 @@ class UserTierBlockRepository
                     "validUntil" to validUntil
                 )
 
-            return musicCommunity.createProposalBlock(
-                blockType = UserTierBlock.BLOCK_TYPE,
-                transaction = transaction,
-                publicKey = musicCommunity.myPeer.publicKey.keyToBin()
-            )
+            return try {
+                musicCommunity.createProposalBlock(
+                    blockType = UserTierBlock.BLOCK_TYPE,
+                    transaction = transaction,
+                    publicKey = musicCommunity.myPeer.publicKey.keyToBin()
+                )
+            } catch (e: Exception) {
+                Log.e("UserTierBlockRepository", "Error creating UserTierBlock:", e)
+                null
+            }
         }
 
         fun toBlock(block: TrustChainBlock): UserTierBlock {
