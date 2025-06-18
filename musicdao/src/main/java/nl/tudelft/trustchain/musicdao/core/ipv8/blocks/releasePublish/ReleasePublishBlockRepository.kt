@@ -54,11 +54,12 @@ class ReleasePublishBlockRepository
                     " releaseDate: $releaseDate, isExclusive: $isExclusive"
             )
 
-            val result = musicCommunity.createProposalBlock(
-                ReleasePublishBlock.BLOCK_TYPE,
-                transaction,
-                myPeer.publicKey.keyToBin()
-            )
+            val result =
+                musicCommunity.createProposalBlock(
+                    ReleasePublishBlock.BLOCK_TYPE,
+                    transaction,
+                    myPeer.publicKey.keyToBin()
+                )
 
             Log.d("ReleasePublishBlockRepository", "Created block: $result")
             return result

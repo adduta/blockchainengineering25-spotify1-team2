@@ -53,7 +53,11 @@ class UserTierVerifier
                 return false
             }
 
-            Log.d("UserTierVerifier", "isUltimateUser: Valid tier block found: ${validTierBlock.tier}, valid from ${validTierBlock.validFrom} to ${validTierBlock.validUntil}")
+            Log.d(
+                "UserTierVerifier",
+                "isUltimateUser: Valid tier block found: ${validTierBlock.tier}," +
+                    " valid from ${validTierBlock.validFrom} to ${validTierBlock.validUntil}"
+            )
 
             return validTierBlock.tier == "ULTIMATE"
         }

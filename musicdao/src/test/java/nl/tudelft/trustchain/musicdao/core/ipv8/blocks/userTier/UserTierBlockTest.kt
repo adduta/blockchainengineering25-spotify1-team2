@@ -11,12 +11,13 @@ class UserTierBlockTest {
         val validFrom = System.currentTimeMillis()
         val validUntil = validFrom + (30L * 24L * 60L * 60L * 1000L) // 30 days in milliseconds
 
-        val block = UserTierBlock(
-            userId = userId,
-            tier = tier,
-            validFrom = validFrom,
-            validUntil = validUntil
-        )
+        val block =
+            UserTierBlock(
+                userId = userId,
+                tier = tier,
+                validFrom = validFrom,
+                validUntil = validUntil
+            )
 
         assertEquals(userId, block.userId)
         assertEquals(tier, block.tier)
@@ -30,12 +31,13 @@ class UserTierBlockTest {
         val tier = "ULTIMATE"
         val validFrom = System.currentTimeMillis()
 
-        val block = UserTierBlock(
-            userId = userId,
-            tier = tier,
-            validFrom = validFrom,
-            validUntil = null
-        )
+        val block =
+            UserTierBlock(
+                userId = userId,
+                tier = tier,
+                validFrom = validFrom,
+                validUntil = null
+            )
 
         assertEquals(userId, block.userId)
         assertEquals(tier, block.tier)

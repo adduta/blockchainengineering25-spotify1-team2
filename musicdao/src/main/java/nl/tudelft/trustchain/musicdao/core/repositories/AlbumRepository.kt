@@ -74,7 +74,10 @@ class AlbumRepository
                                 }
                             }
                         } else {
-                            Log.d("AlbumRepository", "Found exclusive album ${album.id}, but user (${userPublicKey.take(8)}...) is not Ultimate tier")
+                            Log.d(
+                                "AlbumRepository",
+                                "Found exclusive album ${album.id}, but user (${userPublicKey.take(8)}...) is not Ultimate tier"
+                            )
                         }
                     } else if (isPro || isPastDelay) {
                         Log.d("AlbumRepository", "Found album ${album.id}, requesting magnet link for Pro user or past delay period")
@@ -91,7 +94,10 @@ class AlbumRepository
                 } else {
                     Log.d("AlbumRepository", "Found existing magnet link for album ${album.id}: ${album.magnet}")
                     if (album.infoHash.isNullOrEmpty() && album.magnet.isNotEmpty()) {
-                        Log.d("AlbumRepository", "For album ${album.id}, the magnet link was set but infoHash was not. Persisting infoHash.")
+                        Log.d(
+                            "AlbumRepository",
+                            "For album ${album.id}, the magnet link was set but infoHash was not. Persisting infoHash."
+                        )
                         val infoHash: String = TorrentEngine.magnetToInfoHash(album.magnet) ?: ""
                         withContext(Dispatchers.IO) {
                             database.dao.updateReleaseMagnet(album.id, album.magnet, infoHash)
@@ -133,16 +139,29 @@ class AlbumRepository
 
                                 if (entity.isExclusive) {
                                     if (isUltimate) {
-                                        Log.d("AlbumRepository", "Requesting magnet link for exclusive album ${entity.id} for Ultimate user")
+                                        Log.d(
+                                            "AlbumRepository",
+                                            "Requesting magnet link for exclusive album ${entity.id} for Ultimate user"
+                                        )
                                         requestMagnetLink(entity.id)
                                     } else {
-                                        Log.d("AlbumRepository", "Skipping magnet link request for exclusive album ${entity.id} - user is not Ultimate tier")
+                                        Log.d(
+                                            "AlbumRepository",
+                                            "Skipping magnet link request for exclusive album ${entity.id} - user is not Ultimate tier"
+                                        )
                                     }
                                 } else if (isPro || isPastDelay) {
-                                    Log.d("AlbumRepository", "Requesting magnet link for album ${entity.id} for Pro user or past delay period")
+                                    Log.d(
+                                        "AlbumRepository",
+                                        "Requesting magnet link for album ${entity.id} for Pro user or past delay period"
+                                    )
                                     requestMagnetLink(entity.id)
                                 } else {
-                                    Log.d("AlbumRepository", "Skipping magnet link request for album ${entity.id} - user is not Pro and release is not past delay period")
+                                    Log.d(
+                                        "AlbumRepository",
+                                        "Skipping magnet link request for album ${entity.id} " +
+                                            "- user is not Pro and release is not past delay period"
+                                    )
                                 }
                             } catch (e: Exception) {
                                 Log.e("AlbumRepository", "Error requesting magnet link in background: ${e.message}")

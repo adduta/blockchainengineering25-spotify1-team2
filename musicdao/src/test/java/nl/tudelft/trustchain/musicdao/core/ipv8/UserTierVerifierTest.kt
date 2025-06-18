@@ -31,12 +31,13 @@ class UserTierVerifierTest {
     @Test
     fun `test isProUser returns true for PRO tier`() {
         val currentTime = System.currentTimeMillis()
-        val block = UserTierBlock(
-            userId = "test_user",
-            tier = "PRO",
-            validFrom = currentTime - 1000,
-            validUntil = currentTime + 1000
-        )
+        val block =
+            UserTierBlock(
+                userId = "test_user",
+                tier = "PRO",
+                validFrom = currentTime - 1000,
+                validUntil = currentTime + 1000
+            )
 
         every { userTierBlockRepository.getBlocksForUser(userPublicKey) } returns listOf(block)
 
@@ -49,12 +50,13 @@ class UserTierVerifierTest {
     @Test
     fun `test isProUser returns true for ULTIMATE tier`() {
         val currentTime = System.currentTimeMillis()
-        val block = UserTierBlock(
-            userId = "test_user",
-            tier = "ULTIMATE",
-            validFrom = currentTime - 1000,
-            validUntil = currentTime + 1000
-        )
+        val block =
+            UserTierBlock(
+                userId = "test_user",
+                tier = "ULTIMATE",
+                validFrom = currentTime - 1000,
+                validUntil = currentTime + 1000
+            )
 
         every { userTierBlockRepository.getBlocksForUser(userPublicKey) } returns listOf(block)
 
@@ -67,12 +69,13 @@ class UserTierVerifierTest {
     @Test
     fun `test isProUser returns false for expired block`() {
         val currentTime = System.currentTimeMillis()
-        val block = UserTierBlock(
-            userId = "test_user",
-            tier = "PRO",
-            validFrom = currentTime - 2000,
-            validUntil = currentTime - 1000
-        )
+        val block =
+            UserTierBlock(
+                userId = "test_user",
+                tier = "PRO",
+                validFrom = currentTime - 2000,
+                validUntil = currentTime - 1000
+            )
 
         every { userTierBlockRepository.getBlocksForUser(userPublicKey) } returns listOf(block)
 
@@ -95,12 +98,13 @@ class UserTierVerifierTest {
     @Test
     fun `test isUltimateUser returns true for ULTIMATE tier`() {
         val currentTime = System.currentTimeMillis()
-        val block = UserTierBlock(
-            userId = "test_user",
-            tier = "ULTIMATE",
-            validFrom = currentTime - 1000,
-            validUntil = currentTime + 1000
-        )
+        val block =
+            UserTierBlock(
+                userId = "test_user",
+                tier = "ULTIMATE",
+                validFrom = currentTime - 1000,
+                validUntil = currentTime + 1000
+            )
 
         every { userTierBlockRepository.getBlocksForUser(userPublicKey) } returns listOf(block)
 
@@ -113,12 +117,13 @@ class UserTierVerifierTest {
     @Test
     fun `test isUltimateUser returns false for PRO tier`() {
         val currentTime = System.currentTimeMillis()
-        val block = UserTierBlock(
-            userId = "test_user",
-            tier = "PRO",
-            validFrom = currentTime - 1000,
-            validUntil = currentTime + 1000
-        )
+        val block =
+            UserTierBlock(
+                userId = "test_user",
+                tier = "PRO",
+                validFrom = currentTime - 1000,
+                validUntil = currentTime + 1000
+            )
 
         every { userTierBlockRepository.getBlocksForUser(userPublicKey) } returns listOf(block)
 
@@ -131,12 +136,13 @@ class UserTierVerifierTest {
     @Test
     fun `test isUltimateUser returns false for expired block`() {
         val currentTime = System.currentTimeMillis()
-        val block = UserTierBlock(
-            userId = "test_user",
-            tier = "ULTIMATE",
-            validFrom = currentTime - 2000,
-            validUntil = currentTime - 1000
-        )
+        val block =
+            UserTierBlock(
+                userId = "test_user",
+                tier = "ULTIMATE",
+                validFrom = currentTime - 2000,
+                validUntil = currentTime - 1000
+            )
 
         every { userTierBlockRepository.getBlocksForUser(userPublicKey) } returns listOf(block)
 
@@ -149,12 +155,13 @@ class UserTierVerifierTest {
     @Test
     fun `test isUltimateUser returns true for block with null validUntil`() {
         val currentTime = System.currentTimeMillis()
-        val block = UserTierBlock(
-            userId = "test_user",
-            tier = "ULTIMATE",
-            validFrom = currentTime - 1000,
-            validUntil = null
-        )
+        val block =
+            UserTierBlock(
+                userId = "test_user",
+                tier = "ULTIMATE",
+                validFrom = currentTime - 1000,
+                validUntil = null
+            )
 
         every { userTierBlockRepository.getBlocksForUser(userPublicKey) } returns listOf(block)
 

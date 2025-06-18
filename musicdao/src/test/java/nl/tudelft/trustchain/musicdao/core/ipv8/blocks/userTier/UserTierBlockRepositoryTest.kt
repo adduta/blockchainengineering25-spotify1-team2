@@ -48,13 +48,14 @@ class UserTierBlockRepositoryTest {
         every { block1.publicKey } returns userPublicKey
         every { block2.publicKey } returns otherPublicKey
 
-        every { block1.transaction } returns mapOf(
-            "type" to UserTierBlock.BLOCK_TYPE,
-            "userId" to "user1",
-            "tier" to "PRO",
-            "validFrom" to 1000L,
-            "validUntil" to 2000L
-        )
+        every { block1.transaction } returns
+            mapOf(
+                "type" to UserTierBlock.BLOCK_TYPE,
+                "userId" to "user1",
+                "tier" to "PRO",
+                "validFrom" to 1000L,
+                "validUntil" to 2000L
+            )
 
         coEvery { musicCommunity.database.getBlocksWithType(UserTierBlock.BLOCK_TYPE) } returns listOf(block1, block2)
 
@@ -79,13 +80,14 @@ class UserTierBlockRepositoryTest {
         coEvery {
             musicCommunity.createProposalBlock(
                 blockType = UserTierBlock.BLOCK_TYPE,
-                transaction = mapOf(
-                    "type" to UserTierBlock.BLOCK_TYPE,
-                    "userId" to userId,
-                    "tier" to tier,
-                    "validFrom" to validFrom,
-                    "validUntil" to validUntil
-                ),
+                transaction =
+                    mapOf(
+                        "type" to UserTierBlock.BLOCK_TYPE,
+                        "userId" to userId,
+                        "tier" to tier,
+                        "validFrom" to validFrom,
+                        "validUntil" to validUntil
+                    ),
                 publicKey
             )
         } throws RuntimeException()
@@ -96,13 +98,14 @@ class UserTierBlockRepositoryTest {
         coVerify {
             musicCommunity.createProposalBlock(
                 blockType = UserTierBlock.BLOCK_TYPE,
-                transaction = mapOf(
-                    "type" to UserTierBlock.BLOCK_TYPE,
-                    "userId" to userId,
-                    "tier" to tier,
-                    "validFrom" to validFrom,
-                    "validUntil" to validUntil
-                ),
+                transaction =
+                    mapOf(
+                        "type" to UserTierBlock.BLOCK_TYPE,
+                        "userId" to userId,
+                        "tier" to tier,
+                        "validFrom" to validFrom,
+                        "validUntil" to validUntil
+                    ),
                 publicKey
             )
         }
@@ -120,13 +123,14 @@ class UserTierBlockRepositoryTest {
         coEvery {
             musicCommunity.createProposalBlock(
                 blockType = UserTierBlock.BLOCK_TYPE,
-                transaction = mapOf(
-                    "type" to UserTierBlock.BLOCK_TYPE,
-                    "userId" to userId,
-                    "tier" to tier,
-                    "validFrom" to validFrom,
-                    "validUntil" to validUntil
-                ),
+                transaction =
+                    mapOf(
+                        "type" to UserTierBlock.BLOCK_TYPE,
+                        "userId" to userId,
+                        "tier" to tier,
+                        "validFrom" to validFrom,
+                        "validUntil" to validUntil
+                    ),
                 publicKey
             )
         } returns expectedBlock
@@ -137,13 +141,14 @@ class UserTierBlockRepositoryTest {
         coVerify {
             musicCommunity.createProposalBlock(
                 blockType = UserTierBlock.BLOCK_TYPE,
-                transaction = mapOf(
-                    "type" to UserTierBlock.BLOCK_TYPE,
-                    "userId" to userId,
-                    "tier" to tier,
-                    "validFrom" to validFrom,
-                    "validUntil" to validUntil
-                ),
+                transaction =
+                    mapOf(
+                        "type" to UserTierBlock.BLOCK_TYPE,
+                        "userId" to userId,
+                        "tier" to tier,
+                        "validFrom" to validFrom,
+                        "validUntil" to validUntil
+                    ),
                 publicKey
             )
         }
@@ -152,13 +157,14 @@ class UserTierBlockRepositoryTest {
     @Test
     fun `test toBlock converts TrustChainBlock to UserTierBlock`() {
         val block = mockk<TrustChainBlock>()
-        val transaction = mapOf(
-            "type" to UserTierBlock.BLOCK_TYPE,
-            "userId" to "test_user",
-            "tier" to "PRO",
-            "validFrom" to 1000L,
-            "validUntil" to 2000L
-        )
+        val transaction =
+            mapOf(
+                "type" to UserTierBlock.BLOCK_TYPE,
+                "userId" to "test_user",
+                "tier" to "PRO",
+                "validFrom" to 1000L,
+                "validUntil" to 2000L
+            )
 
         every { block.transaction } returns transaction
 
