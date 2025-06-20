@@ -1,4 +1,5 @@
 package nl.tudelft.trustchain.musicdao.core.wallet
+import android.R.string
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,9 @@ import java.io.IOException
 import java.io.InputStream
 import java.math.BigDecimal
 import java.net.URL
-import java.util.*
+import java.util.Date
+import java.util.Dictionary
+
 
 class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
     private var started = false
@@ -252,7 +255,10 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
                 }
                 return Triple(finalTx, payoutsFiltered, skipped)
             } catch (e: Exception) {
-                Log.d("DonationWalletLottery", "Fee estimation failed, reducing payouts and retrying: $e")
+                Log.d(
+                    "DonationWalletLottery",
+                    "Fee estimation failed, reducing payouts and retrying: $e"
+                )
                 payouts =
                     payouts.mapValues { (_, amount) ->
                         (amount - 100000).coerceAtLeast(0) // prevent negative values
@@ -260,6 +266,98 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
             }
         }
     }
+
+    fun createBatchSpendExactWeightedBetter(
+        listenCounts: Map<String, Int>,
+        target: Long,
+        minPerRecipient: Long = 5000L,
+        feeBuffer: Long = 3000L
+    ): Triple<Transaction, Map<String, Long>, Map<String, Long>> {
+        val artistList = listenCounts.entries
+            .sortedByDescending { it.value }
+            .map { it.toPair() }
+        var leftArtists = 1
+        var rightArtists = listenCounts.size
+        var bestArtists = 0 to 0L
+        while (leftArtists <= rightArtists) {
+            val midArtists = (leftArtists + rightArtists) / 2
+            val selectedArtists = artistList.take(midArtists)
+            val weight = selectedArtists.sumOf { it.second }
+            val payouts = selectedArtists.map { (artist, count) ->
+                val payout = ((target.toDouble() * count) / weight).toLong()
+                artist to payout
+            }
+            var leftReduce = 0L
+            var bestReduce = -1L
+            var rightReduce = (payouts.last().second - minPerRecipient)
+            while (leftReduce <= rightReduce) {
+                val midReduce = (leftReduce + rightReduce) / 2
+                val payoutsReduce = payouts.map { (artist, payout) ->
+                    artist to payout - midReduce
+                }
+                val tx = Transaction(config.networkParams)
+                var total = 0L
+                for ((artist, payout) in payoutsReduce){
+                    val address = Address.fromString(config.networkParams, artist)
+                    tx.addOutput(Coin.valueOf(payout), address)
+                    total += payout
+                }
+                try {
+                    val fee = estimateFee(tx)
+                    val totalNeeded = total + fee
+
+                    if (totalNeeded <= target - feeBuffer) {
+                        bestReduce = midReduce
+                        rightReduce = midReduce - 1
+                    } else {
+                        leftReduce = midReduce + 1
+                    }
+                } catch (e: Exception) {
+                    leftReduce = midReduce + 1
+                }
+            }
+            if (bestReduce == -1L){
+                rightArtists = midArtists - 1
+            }
+            else {
+                bestArtists = midArtists to bestReduce
+                leftArtists = midArtists + 1
+            }
+        }
+        if (bestArtists == 0 to 0L){
+            throw IllegalArgumentException(
+                "Cannot create a transaction: there is not enough money to pay any artist"
+            )
+        }
+        val paidNumber = bestArtists.first
+        val reducedValue = bestArtists.second
+        val selectedArtists = artistList.take(paidNumber)
+        val weight = selectedArtists.sumOf { it.second }
+        val payouts = selectedArtists.map { (artist, count) ->
+            val payout = ((target.toDouble() * count) / weight).toLong()
+            artist to payout
+        }
+        val tx = Transaction(config.networkParams)
+        val payoutsReduce = payouts.map { (artist, payout) ->
+            artist to payout - reducedValue
+        }
+        for ((artist, payout) in payoutsReduce){
+            val address = Address.fromString(config.networkParams, artist)
+            tx.addOutput(Coin.valueOf(payout), address)
+        }
+
+        val payedArtist = mutableMapOf<String, Long>()
+        val skippedArtist = mutableMapOf<String, Long>()
+        artistList.forEachIndexed { index, (artist, value) ->
+            if (index < paidNumber) {
+                payedArtist[artist] = value.toLong()
+            } else {
+                skippedArtist[artist] = value.toLong()
+            }
+        }
+        return Triple(tx, payedArtist, skippedArtist)
+    }
+
 
     /**
      * Query the faucet to the default protocol address

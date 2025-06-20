@@ -205,13 +205,14 @@ class DonationWalletManager
                     return
                 }
 
+                Log.i("DonationWalletLottery", "Listen Count Map: ${this.allListenCounts}")
+
                 val target = balance.value
 
                 // Calculate amount per artist (1/n of total balance)
                 // val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
-
                 val (tx, paidArtists, skippedArtists) =
-                    walletService.createBatchSpendExactWeighted(
+                    walletService.createBatchSpendExactWeightedBetter(
                         this.allListenCounts.toMutableMap(),
                         target
                     )
