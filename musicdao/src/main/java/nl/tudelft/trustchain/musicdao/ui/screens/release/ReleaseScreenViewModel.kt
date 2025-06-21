@@ -83,7 +83,7 @@ class ReleaseScreenViewModel
                                     if (isUltimate) {
                                         // For Ultimate users, request magnet link for exclusive content
                                         try {
-                                            val magnetLink = albumRepository.requestMagnetLink(_albumEntity.id)
+                                            val magnetLink = albumRepository.requestMagnetLink(_albumEntity.toAlbum())
                                             if (magnetLink != null) {
                                                 val infoHash = TorrentEngine.magnetToInfoHash(magnetLink)
                                                 if (infoHash != null) {
@@ -104,7 +104,7 @@ class ReleaseScreenViewModel
                                 } else if (isPro || releaseDate.isBefore(sevenDaysAgo)) {
                                     // For Pro users or after delay period, request magnet link
                                     try {
-                                        val magnetLink = albumRepository.requestMagnetLink(_albumEntity.id)
+                                        val magnetLink = albumRepository.requestMagnetLink(_albumEntity.toAlbum())
                                         if (magnetLink != null) {
                                             val infoHash = TorrentEngine.magnetToInfoHash(magnetLink)
                                             if (infoHash != null) {

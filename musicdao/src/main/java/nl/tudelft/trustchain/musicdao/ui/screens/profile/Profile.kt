@@ -235,11 +235,6 @@ fun Profile(
                             title = "No Waiting Period",
                             description = "Skip the 7-day waiting period for basic users"
                         )
-
-                        ProBenefitItem(
-                            title = "Support Artists",
-                            description = "Directly support your favorite artists"
-                        )
                     }
                 }
             }
@@ -271,11 +266,6 @@ fun Profile(
                         UltimateBenefitItem(
                             title = "Exclusive Content",
                             description = "Access to exclusive content from all artists"
-                        )
-
-                        UltimateBenefitItem(
-                            title = "Priority Support",
-                            description = "Get priority support from our team"
                         )
                     }
                 }

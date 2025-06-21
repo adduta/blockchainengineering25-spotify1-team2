@@ -103,7 +103,7 @@ class HomeScreenViewModel
                                     "HomeScreenViewModel",
                                     "Requesting magnet link for album ${album.id} (current magnet: ${album.magnet})"
                                 )
-                                albumRepository.requestMagnetLink(album.id)
+                                albumRepository.requestMagnetLink(album)
                             } catch (e: Exception) {
                                 android.util.Log.e(
                                     "HomeScreenViewModel",

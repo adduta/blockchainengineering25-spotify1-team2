@@ -25,7 +25,11 @@ import nl.tudelft.trustchain.musicdao.core.ipv8.messages.MagnetResponseMessage
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nl.tudelft.trustchain.musicdao.core.cache.CacheDatabase
+import nl.tudelft.trustchain.musicdao.core.cache.entities.AlbumEntity
+import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier.UserTierBlockRepository
 import nl.tudelft.trustchain.musicdao.core.torrent.TorrentEngine
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 @Suppress("DEPRECATION")
 class MusicCommunity(
@@ -45,6 +49,7 @@ class MusicCommunity(
 
     // Store the callback
     private var releaseCallback: ReleaseCallback? = null
+    private val userTierVerifier = UserTierVerifier(UserTierBlockRepository(this))
 
     // Setter for the callback
     fun setReleaseCallback(callback: ReleaseCallback) {
@@ -181,24 +186,25 @@ class MusicCommunity(
                 if (albumEntity != null) {
                     Log.d("MusicCommunity", "Found release ${request.releaseId} in local database with magnet: ${albumEntity.magnet}")
 
-                    if (albumEntity.magnet.isNotEmpty() && albumEntity.magnet != "access_restricted") {
-                        // If we have the release and its magnet link, send it back to the requesting peer
-                        val response =
-                            MagnetResponseMessage(
-                                releaseId = request.releaseId,
-                                magnetLink = albumEntity.magnet
-                            )
+                    // PERFORM ACCESS CONTROL CHECKS
+                    val hasAccess = checkUserAccess(request.originPublicKey, albumEntity)
 
-                        val responsePacket =
-                            serializePacket(
-                                MessageId.MAGNET_RESPONSE_MESSAGE,
-                                response
-                            )
+                    if (hasAccess && albumEntity.magnet.isNotEmpty() && albumEntity.magnet != "access_restricted") {
+                        // If user has access and we have the magnet link, send it back
+                        val response = MagnetResponseMessage(
+                            releaseId = request.releaseId,
+                            magnetLink = albumEntity.magnet
+                        )
+
+                        val responsePacket = serializePacket(
+                            MessageId.MAGNET_RESPONSE_MESSAGE,
+                            response
+                        )
 
                         send(peer, responsePacket)
                         Log.d("MusicCommunity", "Sent magnet link for release ${request.releaseId} to peer ${peer.mid}")
                     } else {
-                        Log.d("MusicCommunity", "Release ${request.releaseId} found but magnet link is empty or restricted")
+                        Log.d("MusicCommunity", "Access denied for release ${request.releaseId} to peer ${peer.mid} or magnet link unavailable")
                     }
                 } else {
                     Log.d("MusicCommunity", "Release ${request.releaseId} not found in local database")
@@ -206,6 +212,52 @@ class MusicCommunity(
             } catch (e: Exception) {
                 Log.e("MusicCommunity", "Error handling magnet request: ${e.message}")
             }
+        }
+    }
+
+    /**
+     * Check if the requesting user has access to the given album
+     * This is the server-side access control that cannot be bypassed
+     */
+    private fun checkUserAccess(userPublicKey: ByteArray, albumEntity: AlbumEntity): Boolean {
+        try {
+            val isUltimate = userTierVerifier.isUltimateUser(userPublicKey)
+            val isPro = userTierVerifier.isProUser(userPublicKey)
+            val isPastDelay = isReleasePastDelayPeriod(albumEntity.releaseDate)
+
+            if (albumEntity.isExclusive) {
+                // Exclusive content only for Ultimate users
+                if (isUltimate) {
+                    Log.d("MusicCommunity", "Granting access to exclusive release ${albumEntity.id} for Ultimate user")
+                    return true
+                } else {
+                    Log.d("MusicCommunity", "Denying access to exclusive release ${albumEntity.id} - user is not Ultimate tier")
+                    return false
+                }
+            } else if (isPro || isPastDelay) {
+                Log.d("MusicCommunity", "Release ${albumEntity.id} is past delay period or user is Pro/Ultimate, granting access")
+                return true
+            } else {
+                Log.d("MusicCommunity", "Denying access to release ${albumEntity.id} - user is not Pro tier and release is not past delay")
+                return false
+            }
+        } catch (e: Exception) {
+            Log.e("MusicCommunity", "Error checking user access: ${e.message}")
+            return false
+        }
+    }
+
+    /**
+     * Check if a release is past the delay period (7 days)
+     */
+    private fun isReleasePastDelayPeriod(releaseDate: String): Boolean {
+        try {
+            val releaseInstant = Instant.parse(releaseDate)
+            val sevenDaysAgo = Instant.now().minus(7, ChronoUnit.DAYS)
+            return releaseInstant.isBefore(sevenDaysAgo)
+        } catch (e: Exception) {
+            Log.e("MusicCommunity", "Error parsing release date: ${e.message}")
+            return false
         }
     }
 

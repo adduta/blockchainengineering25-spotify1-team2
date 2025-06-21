@@ -58,38 +58,12 @@ class AlbumRepository
             // For each album, check if we need to request the magnet link
             for (album in albumEntities) {
                 if (album.magnet == "access_restricted" || album.magnet.isEmpty()) {
-                    val userPublicKeyBytes = userPublicKey.hexToBytes()
-                    val isUltimate = userTierVerifier.isUltimateUser(userPublicKeyBytes)
-                    val isPro = userTierVerifier.isProUser(userPublicKeyBytes)
-                    val isPastDelay = isReleasePastDelayPeriod(album.releaseDate)
-
-                    if (album.isExclusive) {
-                        if (isUltimate) {
-                            Log.d("AlbumRepository", "Found exclusive album ${album.id}, requesting magnet link for Ultimate user")
-                            val magnetLink = requestMagnetLink(album.id)
-                            if (magnetLink.isNullOrEmpty()) {
-                                Log.w("AlbumRepository", "Failed to get magnet link for exclusive album ${album.id}")
-                                withContext(Dispatchers.IO) {
-                                    database.dao.updateReleaseMagnet(album.id, "", "")
-                                }
-                            }
-                        } else {
-                            Log.d(
-                                "AlbumRepository",
-                                "Found exclusive album ${album.id}, but user (${userPublicKey.take(8)}...) is not Ultimate tier"
-                            )
+                    val magnetLink = requestMagnetLink(album.toAlbum())
+                    if (magnetLink.isNullOrEmpty()) {
+                        Log.w("AlbumRepository", "Failed to get magnet link for album ${album.id}")
+                        withContext(Dispatchers.IO) {
+                            database.dao.updateReleaseMagnet(album.id, "", "")
                         }
-                    } else if (isPro || isPastDelay) {
-                        Log.d("AlbumRepository", "Found album ${album.id}, requesting magnet link for Pro user or past delay period")
-                        val magnetLink = requestMagnetLink(album.id)
-                        if (magnetLink.isNullOrEmpty()) {
-                            Log.w("AlbumRepository", "Failed to get magnet link for album ${album.id}")
-                            withContext(Dispatchers.IO) {
-                                database.dao.updateReleaseMagnet(album.id, "", "")
-                            }
-                        }
-                    } else {
-                        Log.d("AlbumRepository", "Found album ${album.id}, but user is not Pro and release is not past delay period")
                     }
                 } else {
                     Log.d("AlbumRepository", "Found existing magnet link for album ${album.id}: ${album.magnet}")
@@ -106,7 +80,6 @@ class AlbumRepository
                 }
             }
 
-            // Filter albums based on user tier and release date
             val albums = albumEntities.map { it.toAlbum() }
             return albums
         }
@@ -129,40 +102,10 @@ class AlbumRepository
 
                     // If no magnet link, request it in background
                     if (entity.magnet.isEmpty()) {
-                        Log.d("AlbumRepository", "No magnet link found for release ${entity.id}, checking access requirements")
+                        Log.d("AlbumRepository", "No magnet link found for release ${entity.id}, requesting in background")
                         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
                             try {
-                                val userPublicKeyBytes = userPublicKey.hexToBytes()
-                                val isUltimate = userTierVerifier.isUltimateUser(userPublicKeyBytes)
-                                val isPro = userTierVerifier.isProUser(userPublicKeyBytes)
-                                val isPastDelay = isReleasePastDelayPeriod(entity.releaseDate)
-
-                                if (entity.isExclusive) {
-                                    if (isUltimate) {
-                                        Log.d(
-                                            "AlbumRepository",
-                                            "Requesting magnet link for exclusive album ${entity.id} for Ultimate user"
-                                        )
-                                        requestMagnetLink(entity.id)
-                                    } else {
-                                        Log.d(
-                                            "AlbumRepository",
-                                            "Skipping magnet link request for exclusive album ${entity.id} - user is not Ultimate tier"
-                                        )
-                                    }
-                                } else if (isPro || isPastDelay) {
-                                    Log.d(
-                                        "AlbumRepository",
-                                        "Requesting magnet link for album ${entity.id} for Pro user or past delay period"
-                                    )
-                                    requestMagnetLink(entity.id)
-                                } else {
-                                    Log.d(
-                                        "AlbumRepository",
-                                        "Skipping magnet link request for album ${entity.id} " +
-                                            "- user is not Pro and release is not past delay period"
-                                    )
-                                }
+                                requestMagnetLink(entity.toAlbum())
                             } catch (e: Exception) {
                                 Log.e("AlbumRepository", "Error requesting magnet link in background: ${e.message}")
                             }
@@ -243,14 +186,33 @@ class AlbumRepository
             }
         }
 
-        fun requestMagnetLink(releaseId: String): String? {
+        fun requestMagnetLink(
+            release: Album
+        ): String? {
             try {
-                // Request magnet link from peers
-                val peersCount = musicCommunity.requestMagnetLink(releaseId)
-                Log.d("AlbumRepository", "Sent magnet link request to $peersCount peers for release $releaseId")
+                val releaseId = release.id
+                val userPublicKeyBytes = musicCommunity.publicKeyHex().hexToBytes()
+                val isUltimate = userTierVerifier.isUltimateUser(userPublicKeyBytes)
+                val isPro = userTierVerifier.isProUser(userPublicKeyBytes)
+                val isPastDelay = isReleasePastDelayPeriod(release.releaseDate.toString())
+
+                if (release.isExclusive) {
+                    if (isUltimate) {
+                        Log.d("AlbumRepository", "Requesting magnet link for exclusive album $releaseId for Ultimate user")
+                        val peersCount = musicCommunity.requestMagnetLink(releaseId)
+                        Log.d("AlbumRepository", "Sent magnet link request to $peersCount peers for release $releaseId")
+                    } else {
+                        Log.d("AlbumRepository", "Skipping magnet link request for exclusive album $releaseId - user is not Ultimate tier")
+                    }
+                } else if (isPro || isPastDelay) {
+                    Log.d("AlbumRepository", "Requesting magnet link for album $releaseId for Pro user or past delay period")
+                    val peersCount = musicCommunity.requestMagnetLink(releaseId)
+                    Log.d("AlbumRepository", "Sent magnet link request to $peersCount peers for release $releaseId")
+                } else {
+                    Log.d("AlbumRepository", "Skipping magnet link request for album $releaseId - user is not Pro and release is not past delay period")
+                }
             } catch (e: Exception) {
-                // Log error and continue
-                Log.e("AlbumRepository", "Error requesting magnet link for release $releaseId: ${e.message}")
+                Log.e("AlbumRepository", "Error requesting magnet link for release ${release.id}: ${e.message}")
             }
             return null
         }

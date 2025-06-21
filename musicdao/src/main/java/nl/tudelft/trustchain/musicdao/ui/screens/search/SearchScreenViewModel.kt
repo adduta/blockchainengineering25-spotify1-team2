@@ -121,7 +121,7 @@ class SearchScreenViewModel
                         album.magnet == "undefined"
                     ) {
                         try {
-                            albumRepository.requestMagnetLink(album.id)
+                            albumRepository.requestMagnetLink(album)
                         } catch (e: Exception) {
                             // Log error if needed
                             Log.e("SearchScreenViewModel", "Could not fetch the magnetLink")
