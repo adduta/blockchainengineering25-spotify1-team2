@@ -26,7 +26,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import nl.tudelft.trustchain.musicdao.core.cache.CacheDatabase
 import nl.tudelft.trustchain.musicdao.core.cache.entities.AlbumEntity
-import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier.UserTierBlockRepository
+import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier.UserTierBlock
 import nl.tudelft.trustchain.musicdao.core.torrent.TorrentEngine
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -41,20 +41,6 @@ class MusicCommunity(
     override val serviceId = "29384902d2938f34872398758cf7ca9238ccc333"
     var swarmHealthMap = mutableMapOf<Sha1Hash, SwarmHealth>() // All recent swarm health data that
     // has been received from peers
-
-    // Define a callback interface for getting release information
-    interface ReleaseCallback {
-        suspend fun getReleaseById(releaseId: String): Any?
-    }
-
-    // Store the callback
-    private var releaseCallback: ReleaseCallback? = null
-    private val userTierVerifier = UserTierVerifier(UserTierBlockRepository(this))
-
-    // Setter for the callback
-    fun setReleaseCallback(callback: ReleaseCallback) {
-        releaseCallback = callback
-    }
 
     // Channel to handle magnet responses
     private val magnetResponseChannel = Channel<MagnetResponseMessage>(UNLIMITED)
@@ -221,9 +207,14 @@ class MusicCommunity(
      */
     private fun checkUserAccess(userPublicKey: ByteArray, albumEntity: AlbumEntity): Boolean {
         try {
-            val isUltimate = userTierVerifier.isUltimateUser(userPublicKey)
-            val isPro = userTierVerifier.isProUser(userPublicKey)
+            Log.d("MusicCommunity", "Checking access for user ${userPublicKey.toHex()} to album ${albumEntity.id}")
+            Log.d("MusicCommunity", "Album isExclusive: ${albumEntity.isExclusive}, releaseDate: ${albumEntity.releaseDate}")
+            
+            val isUltimate = isUltimateUser(userPublicKey)
+            val isPro = isProUser(userPublicKey)
             val isPastDelay = isReleasePastDelayPeriod(albumEntity.releaseDate)
+            
+            Log.d("MusicCommunity", "User access check - isUltimate: $isUltimate, isPro: $isPro, isPastDelay: $isPastDelay")
 
             if (albumEntity.isExclusive) {
                 // Exclusive content only for Ultimate users
@@ -301,6 +292,124 @@ class MusicCommunity(
         }
         Log.d("MusicCommunity", "Sent magnet link request to $count peers with TTL=$ttl")
         return count
+    }
+
+    fun isProUser(userPublicKey: ByteArray): Boolean {
+        Log.d("MusicCommunity", "Checking if user ${userPublicKey.toHex()} is Pro")
+        val userTierBlocks = getBlocksForUser(userPublicKey)
+        Log.d("MusicCommunity", "Found ${userTierBlocks.size} user tier blocks for user ${userPublicKey.toHex()}")
+
+        // If there are no tier blocks, user is not Pro
+        if (userTierBlocks.isEmpty()) {
+            Log.d("MusicCommunity", "No user tier blocks found for user ${userPublicKey.toHex()}")
+            return false
+        }
+
+        // Get the most recent valid tier block
+        val currentTime = System.currentTimeMillis()
+        Log.d("MusicCommunity", "Current time: $currentTime")
+        val validTierBlock =
+            userTierBlocks
+                .filter { it.validFrom <= currentTime && (it.validUntil == null || it.validUntil > currentTime) }
+                .maxByOrNull { it.validFrom }
+
+        // If there is no valid tier block, user is not Pro
+        if (validTierBlock == null) {
+            Log.d("MusicCommunity", "No valid tier block found for user ${userPublicKey.toHex()}")
+            return false
+        }
+
+        Log.d("MusicCommunity", "Valid tier block found for user ${userPublicKey.toHex()}: tier=${validTierBlock.tier}, validFrom=${validTierBlock.validFrom}, validUntil=${validTierBlock.validUntil}")
+
+        // Both PRO and ULTIMATE users have access to PRO features
+        val isPro = validTierBlock.tier == "PRO" || validTierBlock.tier == "ULTIMATE"
+        Log.d("MusicCommunity", "User ${userPublicKey.toHex()} isPro: $isPro")
+        return isPro
+    }
+
+    fun isUltimateUser(userPublicKey: ByteArray): Boolean {
+        val userTierBlocks = getBlocksForUser(userPublicKey)
+
+        // If there are no tier blocks, user is not Ultimate
+        if (userTierBlocks.isEmpty()) {
+            return false
+        }
+
+        // Get the most recent valid tier block
+        val currentTime = System.currentTimeMillis()
+        val validTierBlock =
+            userTierBlocks
+                .filter { it.validFrom <= currentTime && (it.validUntil == null || it.validUntil > currentTime) }
+                .maxByOrNull { it.validFrom }
+
+        // If there is no valid tier block, user is not Ultimate
+        if (validTierBlock == null) {
+            return false
+        }
+
+        Log.d(
+            "UserTierVerifier",
+            "isUltimateUser: Valid tier block found: ${validTierBlock.tier}," +
+                " valid from ${validTierBlock.validFrom} to ${validTierBlock.validUntil}"
+        )
+
+        return validTierBlock.tier == "ULTIMATE"
+    }
+
+    fun getBlocksForUser(userPublicKey: ByteArray): List<UserTierBlock> {
+        Log.d("MusicCommunity", "Getting blocks for user ${userPublicKey.toHex()}")
+        val allUserTierBlocks = database.getBlocksWithType(UserTierBlock.BLOCK_TYPE)
+        Log.d("MusicCommunity", "Found ${allUserTierBlocks.size} total user tier blocks in database")
+        
+        val userBlocks = allUserTierBlocks
+            .filter { it.publicKey.contentEquals(userPublicKey) }
+            .map { toBlock(it) }
+        
+        Log.d("MusicCommunity", "Found ${userBlocks.size} user tier blocks for user ${userPublicKey.toHex()}")
+        return userBlocks
+    }
+
+    fun toBlock(block: TrustChainBlock): UserTierBlock {
+        @Suppress("UNCHECKED_CAST")
+        val transaction = block.transaction as Map<String, Any>
+        return UserTierBlock(
+            userId = transaction["userId"] as String,
+            tier = transaction["tier"] as String,
+            validFrom = (transaction["validFrom"] as Number).toLong(),
+            validUntil = (transaction["validUntil"] as? Number)?.toLong()
+        )
+    }
+
+    /**
+     * Manually broadcast user tier blocks to help with debugging
+     */
+    fun broadcastUserTierBlocks() {
+        val userTierBlocks = database.getBlocksWithType(UserTierBlock.BLOCK_TYPE)
+        Log.d("MusicCommunity", "Broadcasting ${userTierBlocks.size} user tier blocks")
+        
+        val randomPeer = pickRandomPeer()
+        if (randomPeer != null) {
+            userTierBlocks.forEach { block ->
+                Log.d("MusicCommunity", "Broadcasting user tier block ${block.blockId} to peer ${randomPeer.mid}")
+                sendBlock(block, randomPeer)
+            }
+        } else {
+            Log.d("MusicCommunity", "No peers available for broadcasting user tier blocks")
+        }
+    }
+
+    /**
+     * Check if user tier block signer and validator are properly registered
+     */
+    fun checkUserTierBlockRegistration() {
+        val hasValidator = txValidators.containsKey("user_tier")
+        val hasSigner = blockSigners.containsKey("user_tier")
+        
+        Log.d("MusicCommunity", "User tier block registration check:")
+        Log.d("MusicCommunity", "  - Has validator: $hasValidator")
+        Log.d("MusicCommunity", "  - Has signer: $hasSigner")
+        Log.d("MusicCommunity", "  - Total validators: ${txValidators.size}")
+        Log.d("MusicCommunity", "  - Total signers: ${blockSigners.size}")
     }
 
     object MessageId {

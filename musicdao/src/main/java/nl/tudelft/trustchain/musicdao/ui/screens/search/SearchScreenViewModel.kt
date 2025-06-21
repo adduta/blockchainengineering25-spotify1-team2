@@ -45,22 +45,9 @@ class SearchScreenViewModel
         init {
             viewModelScope.launch {
                 val userPublicKey = musicCommunity.publicKeyHex()
-                // 1. Fetch albums only from cache for instant UI update
-                var albums = albumRepository.getAlbumsFromCache(userPublicKey)
-                _searchResult.value = downloadedFirstInListOfAlbums(albums)
+                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
                 _peerAmount.value = musicCommunity.getPeers().size
-                _totalReleaseAmount.value = albums.size
-                // 2. In the background, refresh magnet links (do not block UI)
-                refreshMagnetLinks(albums)
-
-                // 3. Immediately refresh the cache (fetch from network)
-                albumRepository.refreshCache()
-                // 4. Fetch albums again after cache refresh
-                albums = albumRepository.getAlbums(userPublicKey, releaseRepository)
-                _searchResult.value = downloadedFirstInListOfAlbums(albums)
-                _totalReleaseAmount.value = albums.size
-                // 5. In the background, refresh magnet links for new albums
-                refreshMagnetLinks(albums)
+                _totalReleaseAmount.value = albumRepository.getAlbums(userPublicKey, releaseRepository).size
             }
         }
 
