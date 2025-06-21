@@ -95,7 +95,6 @@ class MusicActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         lifecycleScope.launchWhenStarted {
             setupMusicCommunity.registerListeners()
-            musicCommunity.checkUserTierBlockRegistration() // Check if user tier blocks are properly registered
 
             albumRepository.refreshCache()
             torrentEngine.seedStrategy()

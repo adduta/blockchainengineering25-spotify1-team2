@@ -209,11 +209,11 @@ class MusicCommunity(
         try {
             Log.d("MusicCommunity", "Checking access for user ${userPublicKey.toHex()} to album ${albumEntity.id}")
             Log.d("MusicCommunity", "Album isExclusive: ${albumEntity.isExclusive}, releaseDate: ${albumEntity.releaseDate}")
-            
+
             val isUltimate = isUltimateUser(userPublicKey)
             val isPro = isProUser(userPublicKey)
             val isPastDelay = isReleasePastDelayPeriod(albumEntity.releaseDate)
-            
+
             Log.d("MusicCommunity", "User access check - isUltimate: $isUltimate, isPro: $isPro, isPastDelay: $isPastDelay")
 
             if (albumEntity.isExclusive) {
@@ -360,11 +360,11 @@ class MusicCommunity(
         Log.d("MusicCommunity", "Getting blocks for user ${userPublicKey.toHex()}")
         val allUserTierBlocks = database.getBlocksWithType(UserTierBlock.BLOCK_TYPE)
         Log.d("MusicCommunity", "Found ${allUserTierBlocks.size} total user tier blocks in database")
-        
+
         val userBlocks = allUserTierBlocks
             .filter { it.publicKey.contentEquals(userPublicKey) }
             .map { toBlock(it) }
-        
+
         Log.d("MusicCommunity", "Found ${userBlocks.size} user tier blocks for user ${userPublicKey.toHex()}")
         return userBlocks
     }
@@ -378,38 +378,6 @@ class MusicCommunity(
             validFrom = (transaction["validFrom"] as Number).toLong(),
             validUntil = (transaction["validUntil"] as? Number)?.toLong()
         )
-    }
-
-    /**
-     * Manually broadcast user tier blocks to help with debugging
-     */
-    fun broadcastUserTierBlocks() {
-        val userTierBlocks = database.getBlocksWithType(UserTierBlock.BLOCK_TYPE)
-        Log.d("MusicCommunity", "Broadcasting ${userTierBlocks.size} user tier blocks")
-        
-        val randomPeer = pickRandomPeer()
-        if (randomPeer != null) {
-            userTierBlocks.forEach { block ->
-                Log.d("MusicCommunity", "Broadcasting user tier block ${block.blockId} to peer ${randomPeer.mid}")
-                sendBlock(block, randomPeer)
-            }
-        } else {
-            Log.d("MusicCommunity", "No peers available for broadcasting user tier blocks")
-        }
-    }
-
-    /**
-     * Check if user tier block signer and validator are properly registered
-     */
-    fun checkUserTierBlockRegistration() {
-        val hasValidator = txValidators.containsKey("user_tier")
-        val hasSigner = blockSigners.containsKey("user_tier")
-        
-        Log.d("MusicCommunity", "User tier block registration check:")
-        Log.d("MusicCommunity", "  - Has validator: $hasValidator")
-        Log.d("MusicCommunity", "  - Has signer: $hasSigner")
-        Log.d("MusicCommunity", "  - Total validators: ${txValidators.size}")
-        Log.d("MusicCommunity", "  - Total signers: ${blockSigners.size}")
     }
 
     object MessageId {

@@ -165,7 +165,7 @@ class ReleaseScreenViewModel
                             try {
                                 // Get latest release data to ensure we have the most recent infoHash
                                 val currentRelease = database.dao.get(releaseId)
-                                Log.d("ReleaseScreenViewModel", "Current release: $currentRelease, infoHash: ${currentRelease.infoHash}")
+                                // Log.d("ReleaseScreenViewModel", "Current release: $currentRelease, infoHash: ${currentRelease.infoHash}")
 
                                 if (currentRelease?.infoHash != null) {
                                     val status = torrentEngine.getTorrentStatus(currentRelease.infoHash)

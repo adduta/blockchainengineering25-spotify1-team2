@@ -66,7 +66,7 @@ class AlbumRepository
                         }
                     }
                 } else {
-                    Log.d("AlbumRepository", "Found existing magnet link for album ${album.id}: ${album.magnet}")
+                    // Log.d("AlbumRepository", "Found existing magnet link for album ${album.id}: ${album.magnet}")
                     if (album.infoHash.isNullOrEmpty() && album.magnet.isNotEmpty()) {
                         Log.d(
                             "AlbumRepository",
@@ -110,9 +110,10 @@ class AlbumRepository
                                 Log.e("AlbumRepository", "Error requesting magnet link in background: ${e.message}")
                             }
                         }
-                    } else {
-                        Log.d("AlbumRepository", "Found existing magnet link for release ${entity.id}")
                     }
+//                    else {
+//                        Log.d("AlbumRepository", "Found existing magnet link for release ${entity.id}")
+//                    }
 
                     album
                 }
@@ -257,7 +258,8 @@ class AlbumRepository
                         root = null,
                         isDownloaded = false,
                         infoHash = infoHash,
-                        torrentPath = null
+                        torrentPath = null,
+                        isExclusive = it.isExclusive
                     )
                 )
             }
