@@ -12,4 +12,4 @@ class UserTierBlockSigner
         override fun onSignatureRequest(block: TrustChainBlock) {
             musicCommunity.createAgreementBlock(block, mapOf<Any?, Any?>())
         }
-    } 
+    }

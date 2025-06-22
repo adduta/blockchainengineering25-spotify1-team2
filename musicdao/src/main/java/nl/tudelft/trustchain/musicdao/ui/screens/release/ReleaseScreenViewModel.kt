@@ -174,7 +174,7 @@ class ReleaseScreenViewModel
                                     }
                                 }
                             } catch (e: Exception) {
-                                Log.e("ReleaseScreenViewModel", "Error getting torrent status: ${e.message}")
+                                Log.d("ReleaseScreenViewModel", "Error getting torrent status: ${e.message}")
                             }
                             delay(1000L)
                         }

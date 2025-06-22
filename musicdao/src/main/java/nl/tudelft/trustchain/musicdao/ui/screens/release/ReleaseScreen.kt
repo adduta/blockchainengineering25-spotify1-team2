@@ -251,7 +251,7 @@ fun ReleaseScreen(
                                     when (accessReason) {
                                         ReleaseScreenViewModel.AccessReason.RESTRICTED -> "This release is currently restricted"
                                         ReleaseScreenViewModel.AccessReason.WAITING_PERIOD -> "This release will be available soon"
-                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "Something went wrong, try again later"
+                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "Trying to fetch the release..."
                                         ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
                                         ReleaseScreenViewModel.AccessReason.EXCLUSIVE -> "This is an exclusive release"
                                         null -> "Release not available for download"
@@ -271,6 +271,13 @@ fun ReleaseScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "Upgrade to Pro to access this release immediately",
+                                    style = MaterialTheme.typography.body2,
+                                    textAlign = TextAlign.Center
+                                )
+                            } else if (accessReason == ReleaseScreenViewModel.AccessReason.NO_MAGNET) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "If you just upgraded your account, new releases might take a while to load.",
                                     style = MaterialTheme.typography.body2,
                                     textAlign = TextAlign.Center
                                 )
