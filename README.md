@@ -37,7 +37,7 @@ The following steps are executed when a user updates to `Pro`/`Ultimate`:
 
 The account tier validations for new/exclusive releases are performed only on the tier blocks whose whose `validFrom` is in the past and `validUntil` is in the future. This ensures that an expired `PRO`/`ULTIMATE` account is reverted back to `BASIC`.
 
-<img src="doc/musicdao/account_hierarchy/upgrade_screen.png" width="300"><img src="doc/musicdao/account_hierarchy/upgrade_screen_pro.png" width="300"><img src="doc/musicdao/account_hierarchy/update_screen_ultimate.png" width="300">
+<img src="doc/musicdao/account_hierarchy/upgrade_screen.png" width="280"><img src="doc/musicdao/account_hierarchy/upgrade_screen_pro.png" width="280"><img src="doc/musicdao/account_hierarchy/update_screen_ultimate.png" width="280">
 
 ### 4. Tier Access Checks when Requesting a Release
 
