@@ -131,6 +131,20 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
         return tx
     }
 
+    /**
+     * Estimates the fee required to send the given Bitcoin transaction using the current wallet.
+     *
+     * This method creates a [SendRequest] from the provided [Transaction], then attempts
+     * to complete the transaction using the wallet. During this process, the wallet estimates
+     * and assigns an appropriate fee based on current network conditions and available UTXOs.
+     *
+     * @param tx The [Transaction] to estimate the fee for.
+     * @return The estimated fee amount in satoshis as a [Long].
+     *
+     * @throws InsufficientMoneyException if the wallet does not have enough balance to cover
+     *         the outputs and the estimated transaction fee.
+     * @throws Exception for other wallet-related errors such as incomplete inputs or invalid addresses.
+     */
     fun estimateFee(tx: Transaction): Long {
         val request = SendRequest.forTx(tx)
         wallet().completeTx(request)
@@ -165,6 +179,29 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
         return addressList
     }
 
+    /**
+     * Creates a Bitcoin transaction that distributes the maximum possible equal payout
+     * to all given recipients, without exceeding the specified target amount.
+     *
+     * This function performs a binary search to find the largest uniform amount that
+     * can be paid to each address such that:
+     * - The total payment (including estimated transaction fee) is less than or equal to `target - feeBuffer`.
+     * - The per-recipient amount is at least `minPerRecipient`.
+     *
+     * If no valid per-recipient amount can be found that satisfies the constraints,
+     * an [IllegalArgumentException] is thrown.
+     *
+     * @param addressStringList A list of Bitcoin address strings to send payments to.
+     * @param target The total amount (in satoshis) available for all payments combined.
+     * @param minPerRecipient The minimum number of satoshis each recipient must receive (default: 5000).
+     * @param feeBuffer A buffer in satoshis reserved for transaction fees (default: 3000).
+     *
+     * @return A [Pair] containing:
+     *  - A [Transaction] object representing the final transaction.
+     *  - The final per-recipient amount in satoshis.
+     *
+     * @throws IllegalArgumentException if no suitable amount can be distributed within the constraints.
+     */
     fun createBatchSpendExact(
         addressStringList: List<String>,
         target: Long,
@@ -212,6 +249,31 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
         return Pair(finalTx, bestAmount)
     }
 
+    /**
+     * Creates a Bitcoin transaction that distributes a specified target amount proportionally
+     * among recipients based on their listen counts (weights).
+     *
+     * This method calculates a payout for each artist such that:
+     * - The total payout does not exceed the target.
+     * - Each artist receives an amount proportional to their listen count.
+     * - Artists with very low payout values (below [minPerRecipient]) are skipped.
+     * - If fee estimation fails or the transaction cost is too high, payouts are reduced and retried.
+     *
+     * The algorithm continues adjusting the payouts downward (in chunks of 100,000 satoshis)
+     * until the transaction is valid and fits within the target minus [feeBuffer].
+     *
+     * @param listenCounts A map where each key is a Bitcoin address (artist) and the value is their listen count.
+     * @param target The total number of satoshis to distribute across all recipients.
+     * @param minPerRecipient The minimum amount in satoshis any artist must receive to be included (default: 5000).
+     * @param feeBuffer An additional buffer subtracted from the target to reserve for transaction fees (default: 3000).
+     *
+     * @return A [Triple] consisting of:
+     * - The final [Transaction] object containing valid outputs.
+     * - A map of artists who were paid and how much they received.
+     * - A map of artists who were skipped due to too-low payouts.
+     *
+     * @throws Exception if a valid transaction cannot be constructed even after retrying.
+     */
     fun createBatchSpendExactWeighted(
         listenCounts: Map<String, Int>,
         target: Long,
@@ -264,6 +326,25 @@ class WalletService(val config: WalletConfig, private val app: WalletAppKit) {
         }
     }
 
+    /**
+     * Creates a Bitcoin transaction that distributes a specified total amount (`target`) among a weighted list of artists.
+     * The weights are determined by `listenCounts`, and the payout per artist is reduced if needed to fit within budget.
+     *
+     * This method attempts to:
+     * 1. Select the largest possible group of top-weighted artists that can be paid above `minPerRecipient`.
+     * 2. Distribute funds proportionally to each artist's listen count.
+     * 3. Reduce each artist's payout uniformly (if necessary) to account for network transaction fees.
+     *
+     * @param listenCounts A map of artist Bitcoin addresses to their listen counts (used as weights).
+     * @param target The total amount of satoshis available to distribute.
+     * @param minPerRecipient The minimum amount (in satoshis) that must be paid to each recipient (default 5000).
+     * @param feeBuffer A safety buffer to account for potential fee increases (default 3000).
+     * @return Triple:
+     *  - A `Transaction` object representing the batch payout.
+     *  - A map of artists that were paid and the amount they received.
+     *  - A map of artists that were skipped due to insufficient funds.
+     * @throws IllegalArgumentException if no valid distribution could be created under the constraints.
+     */
     fun createBatchSpendExactWeightedBetter(
         listenCounts: Map<String, Int>,
         target: Long,
