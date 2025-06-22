@@ -13,4 +13,5 @@ data class Album(
     val songs: List<Song>?,
     val cover: File?,
     val root: File?,
+    val isExclusive: Boolean
 )

@@ -64,23 +64,26 @@ class ProfileScreenViewModel
         private fun loadTierStatus() {
             viewModelScope.launch {
                 val publicKeyBytes = publicKey.hexToBytes()
+                val isUltimate = userTierVerifier.isUltimateUser(publicKeyBytes)
                 val isPro = userTierVerifier.isProUser(publicKeyBytes)
 
-                if (isPro) {
+                if (isUltimate) {
+                    _accountType.value = AccountType.ULTIMATE
+                } else if (isPro) {
                     _accountType.value = AccountType.PRO
-                    // Get the most recent valid tier block to determine validity period
-                    val userTierBlocks = userTierBlockRepository.getBlocksForUser(publicKeyBytes)
-                    val currentTime = System.currentTimeMillis()
-                    val validTierBlock =
-                        userTierBlocks
-                            .filter { it.validFrom <= currentTime && (it.validUntil == null || it.validUntil > currentTime) }
-                            .maxByOrNull { it.validFrom }
-
-                    _validUntil.value = validTierBlock?.validUntil?.let { Instant.ofEpochMilli(it) }
                 } else {
                     _accountType.value = AccountType.BASIC
-                    _validUntil.value = null
                 }
+
+                // Get the most recent valid tier block to determine validity period
+                val userTierBlocks = userTierBlockRepository.getBlocksForUser(publicKeyBytes)
+                val currentTime = System.currentTimeMillis()
+                val validTierBlock =
+                    userTierBlocks
+                        .filter { it.validFrom <= currentTime && (it.validUntil == null || it.validUntil > currentTime) }
+                        .maxByOrNull { it.validFrom }
+
+                _validUntil.value = validTierBlock?.validUntil?.let { Instant.ofEpochMilli(it) }
             }
         }
 
@@ -95,6 +98,27 @@ class ProfileScreenViewModel
 
                 if (success) {
                     _accountType.value = AccountType.PRO
+                    // Calculate validUntil based on months
+                    _validUntil.value = Instant.now().plusSeconds(months * 30L * 24L * 60L * 60L)
+                    // Force refresh releases to get updated magnet links
+                    _releases.value = artistRepository.getArtistReleases(publicKey = publicKey)
+                    // Force refresh the cache to ensure magnet links are updated
+                    albumRepository.refreshCache()
+                }
+            }
+        }
+
+        fun upgradeToUltimate(months: Int = 1) {
+            viewModelScope.launch {
+                val success =
+                    userTierService.upgradeToUltimate(
+                        userId = publicKey,
+                        durationMonths = months,
+                        bitcoinWalletViewModel = bitcoinWalletViewModel
+                    )
+
+                if (success) {
+                    _accountType.value = AccountType.ULTIMATE
                     // Calculate validUntil based on months
                     _validUntil.value = Instant.now().plusSeconds(months * 30L * 24L * 60L * 60L)
                     // Force refresh releases to get updated magnet links

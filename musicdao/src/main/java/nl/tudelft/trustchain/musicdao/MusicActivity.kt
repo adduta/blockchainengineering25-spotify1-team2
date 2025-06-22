@@ -99,6 +99,7 @@ class MusicActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         lifecycleScope.launchWhenStarted {
             setupMusicCommunity.registerListeners()
+
             albumRepository.refreshCache()
             torrentEngine.seedStrategy()
 

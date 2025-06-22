@@ -54,12 +54,14 @@ class BatchPublisher
                 val title = record.get(0)
                 val artist = record.get(1)
                 val magnet = record.get(2)
+                val isExclusive = record.get(3).toBoolean()
+                Log.d("MusicDao", "Batchpublisher: $title, $artist, $magnet, isExclusive: $isExclusive")
 
                 val infoHash = TorrentEngine.magnetToInfoHash(magnet)
 
                 // Only publish albums not published before.
                 if (currentAlbums.find { TorrentEngine.magnetToInfoHash(it.magnet) == infoHash } == null) {
-                    Log.d("MusicDao", "Batchpublisher: $title, $artist, $infoHash")
+                    Log.d("MusicDao", "Batchpublisher: $title, $artist, $infoHash, isExclusive: $isExclusive")
                     val id = UUID.randomUUID().toString()
 
                     val result =
@@ -68,7 +70,8 @@ class BatchPublisher
                             magnet = magnet,
                             title = title,
                             artist = artist,
-                            releaseDate = Instant.now().toString()
+                            releaseDate = Instant.now().toString(),
+                            isExclusive = isExclusive
                         )
 
                     Log.d("MusicDao", "Batchpublisher: $infoHash $result")

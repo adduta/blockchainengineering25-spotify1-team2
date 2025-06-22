@@ -20,7 +20,8 @@ data class AlbumEntity(
     val root: String?,
     val isDownloaded: Boolean,
     val infoHash: String?,
-    val torrentPath: String?
+    val torrentPath: String?,
+    val isExclusive: Boolean = false
 ) {
     fun toAlbum(): Album {
         return Album(
@@ -50,7 +51,8 @@ data class AlbumEntity(
                             null
                         }
                     }
-                }
+                },
+            isExclusive = isExclusive
         )
     }
 }
