@@ -81,7 +81,7 @@ class MusicActivity : AppCompatActivity() {
     var mBound: Boolean = false
 
     // Add a flag to control leadership
-    private var isManualLeader: Boolean = true
+    private var isManualLeader: Boolean = false
 
     private var walletAddressJob: Job? = null
     private var walletBalanceJob: Job? = null
