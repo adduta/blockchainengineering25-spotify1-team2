@@ -21,7 +21,6 @@ import androidx.navigation.NavController
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Artist
 import nl.tudelft.trustchain.musicdao.ui.components.releases.NonLazyReleaseList
-import nl.tudelft.trustchain.musicdao.ui.navigation.Screen
 import nl.tudelft.trustchain.musicdao.core.model.AccountType
 import nl.tudelft.trustchain.musicdao.ui.components.TierStatusBadge
 import java.time.format.DateTimeFormatter
@@ -63,6 +62,7 @@ fun Profile(
     val validUntil by viewModel.validUntil.collectAsState()
     var showUpgradeDialog by remember { mutableStateOf(false) }
     var showUltimateUpgradeDialog by remember { mutableStateOf(false) }
+    val donationAddress by bitcoinWalletViewModel.donationAddress.collectAsState()
 
     Column(
         modifier =
@@ -161,6 +161,7 @@ fun Profile(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Button(
+                                            enabled = donationAddress != "",
                                             onClick = { showUpgradeDialog = true },
                                             modifier = Modifier.weight(1f)
                                         ) {
@@ -172,6 +173,7 @@ fun Profile(
                                             Text("Upgrade to Pro")
                                         }
                                         Button(
+                                            enabled = donationAddress != "",
                                             onClick = { showUltimateUpgradeDialog = true },
                                             modifier = Modifier.weight(1f)
                                         ) {
@@ -275,15 +277,16 @@ fun Profile(
                 OutlinedButton(onClick = { }, modifier = Modifier.padding(end = 10.dp)) {
                     Text(text = "Follow")
                 }
-                OutlinedButton(onClick = {
-                    navController.navigate(
-                        Screen.Donate.createRoute(
-                            publicKey = artist.publicKey
-                        )
-                    )
-                }) {
-                    Text(text = "Donate")
-                }
+                // Direct Donations are not allowed at the moment!
+                // OutlinedButton(onClick = {
+                //     navController.navigate(
+                //         Screen.Donate.createRoute(
+                //             publicKey = artist.publicKey
+                //         )
+                //     )
+                // }) {
+                //     Text(text = "Donate")
+                // }
             }
 
             Column(modifier = Modifier.padding(bottom = 20.dp)) {

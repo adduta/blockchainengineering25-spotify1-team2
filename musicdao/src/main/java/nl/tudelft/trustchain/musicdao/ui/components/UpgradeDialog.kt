@@ -68,7 +68,7 @@ fun UpgradeDialog(
                             text = if (isUltimate) "Upgrade to Ultimate" else "Upgrade to Pro",
                             style = MaterialTheme.typography.h5,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colors.primary
+                            color = MaterialTheme.colors.primary,
                         )
                     }
                 }

@@ -3,12 +3,8 @@ package nl.tudelft.trustchain.musicdao.core.wallet
 import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.tudelft.trustchain.musicdao.core.repositories.ArtistRepository
 import org.bitcoinj.core.Coin
@@ -38,6 +34,8 @@ class DonationWalletManager
         private lateinit var walletKit: WalletAppKit
         private var lotteryJob: Job? = null
         private lateinit var walletService: WalletService
+        private var allListenCounts: MutableMap<String, Int> = mutableMapOf()
+        var lastLotteryTimestamp: Long = 0
 
         val onSetupCompletedListeners = mutableListOf<() -> Unit>()
 
@@ -118,86 +116,117 @@ class DonationWalletManager
             return walletKit.wallet().balance
         }
 
-        fun startLottery() {
+        fun runLottery() {
             if (!::walletKit.isInitialized) {
                 Log.e("DonationWalletLottery", "Cannot start lottery: Wallet not initialized")
                 return
             }
-
-            lotteryJob?.cancel() // Cancel any existing lottery job
-
-            lotteryJob =
-                CoroutineScope(Dispatchers.IO).launch {
-                    while (isActive) {
-                        try {
-                            // Request money from faucet
-                            if (!walletKit.isRunning || walletKit.wallet() == null) {
-                                Log.d("DonationWalletLottery", "Waiting for wallet to be ready...")
-                                delay(10000)
-                                continue
-                            }
-
-                            // Get current balance
-                            val balance = walletService.confirmedBalance()
-                            if (balance == null) {
-                                Log.i("DonationWalletLottery", "The balance is null for distribution")
-                                delay(10000) // Wait 10 seconds before next attempt
-                                continue
-                            }
-
-                            Log.e("DonationWalletLottery", "Current balance is ${balance.toPlainString()}")
-
-                            val peerGroup = walletKit.peerGroup()
-                            val pendingTxs = walletKit.wallet().pendingTransactions
-                            Log.d("DonationWalletLottery", "Number of pending transactions ${pendingTxs.size}")
-                            for (tx in pendingTxs) {
-                                peerGroup.broadcastTransaction(tx)
-                                val confidence = tx.confidence
-                            }
-
-                            // Get all artists
-                            val artists = artistRepository.getArtists()
-                            if (artists.isEmpty()) {
-                                Log.i("DonationWalletLottery", "No artists found to distribute donations")
-                                delay(10000) // Wait 10 seconds before next attempt
-                                continue
-                            }
-
-                            // Calculate amount per artist (1/n of total balance)
-                            val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
-                            Log.i("DonationWalletLottery", "Distributing ${amountPerArtist.toPlainString()} to each artist")
-
-                            val threshold = Coin.valueOf(5000)
-
-                            if (amountPerArtist.isLessThan(threshold)) {
-                                Log.i(
-                                    "DonationWalletLottery",
-                                    "The amount per artist is less than 0.00005," +
-                                        " not enough balance for distribution"
-                                )
-                                delay(10000) // Wait 10 seconds before next attempt
-                                continue
-                            }
-
-                            val recipients = mutableListOf<Pair<String, String>>()
-                            artists.forEach { artist -> recipients.add(Pair(artist.bitcoinAddress, amountPerArtist.toPlainString())) }
-                            try {
-                                val result = walletService.sendBatchTransaction(recipients)
-                                if (result) {
-                                    Log.i("TestArtist", "Successfully sent batch transaction)")
-                                } else {
-                                    Log.e("TestArtist", "Failed to send batch transaction")
-                                }
-                            } catch (e: Exception) {
-                                Log.e("DonationWalletLottery", "Error sending batch transaction")
-                            }
-                        } catch (e: Exception) {
-                            Log.e("DonationWalletLottery", "Error in lottery distribution: $e")
-                        }
-
-                        delay(10000) // Wait 10 seconds before next distribution
-                    }
+            try {
+                if (!walletKit.isRunning || walletKit.wallet() == null) {
+                    Log.d("DonationWalletLottery", "Waiting for wallet to be ready...")
+                    return
                 }
+
+                // Get current balance
+                val balance = walletService.confirmedBalance()
+                if (balance == null) {
+                    Log.i("DonationWalletLottery", "The balance is null for distribution")
+                    return
+                }
+
+                Log.e("DonationWalletLottery", "Current balance is ${balance.toPlainString()}")
+
+                val peerGroup = walletKit.peerGroup()
+                val pendingTxs = walletKit.wallet().pendingTransactions
+                Log.d("DonationWalletLottery", "Number of pending transactions ${pendingTxs.size}")
+                for (tx in pendingTxs) {
+                    peerGroup.broadcastTransaction(tx)
+                }
+
+                // Get all artists
+                val artists = artistRepository.getArtists()
+                if (artists.isEmpty()) {
+                    Log.i("DonationWalletLottery", "No artists found to distribute donations")
+                    return
+                }
+
+                val addressStringList = mutableListOf<String>()
+                artists.forEach { artist -> addressStringList.add(artist.bitcoinAddress) }
+
+                val target = balance.value
+
+                // Calculate amount per artist (1/n of total balance)
+                // val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
+
+                val result = walletService.createBatchSpendExact(addressStringList, target)
+                Log.i("DonationWalletLottery", "Each artist receives: ${result.second}")
+                Log.i("DonationWalletLottery", "Money distributed to artists without fee: ${result.second * artists.size}")
+
+                walletService.sendTransaction(result.first)
+            } catch (e: Exception) {
+                Log.e("DonationWalletLottery", "Error in lottery distribution: ${e.message}")
+            }
+        }
+
+        suspend fun runWeightedLottery(listenCounts: Map<String, Int>) {
+            if (!::walletKit.isInitialized) {
+                Log.e("DonationWalletLottery", "Cannot start lottery: Wallet not initialized")
+                return
+            }
+            try {
+                if (!walletKit.isRunning || walletKit.wallet() == null) {
+                    Log.d("DonationWalletLottery", "Waiting for wallet to be ready...")
+                    return
+                }
+
+                for ((key, value) in listenCounts) {
+                    val bitcoinAddress = artistRepository.getArtist(key)?.bitcoinAddress as String
+                    this.allListenCounts[bitcoinAddress] = this.allListenCounts.getOrDefault(bitcoinAddress, 0) + value
+                }
+
+                // Get current balance
+                val balance = walletService.confirmedBalance()
+                if (balance == null) {
+                    Log.i("DonationWalletLottery", "The balance is null for distribution")
+                    return
+                }
+
+                Log.e("DonationWalletLottery", "Current balance is ${balance.toPlainString()}")
+
+                val peerGroup = walletKit.peerGroup()
+                val pendingTxs = walletKit.wallet().pendingTransactions
+                Log.d("DonationWalletLottery", "Number of pending transactions ${pendingTxs.size}")
+                for (tx in pendingTxs) {
+                    peerGroup.broadcastTransaction(tx)
+                }
+
+                if (this.allListenCounts.values.all { it == 0 }) {
+                    Log.i("DonationWalletLottery", "No artist found with non zero weight")
+                    return
+                }
+
+                Log.i("DonationWalletLottery", "Listen Count Map: ${this.allListenCounts}")
+
+                val target = balance.value
+
+                // Calculate amount per artist (1/n of total balance)
+                // val amountPerArtist = balance.divide(artists.size.toLong()).divide(2)
+                val (tx, paidArtists, skippedArtists) =
+                    walletService.createBatchSpendExactWeightedBetter(
+                        this.allListenCounts.toMutableMap(),
+                        target
+                    )
+                Log.i("DonationWalletLottery", "Paid artists: $paidArtists")
+                Log.i("DonationWalletLottery", "Skipped artists: $skippedArtists")
+
+                paidArtists.keys.forEach { artist ->
+                    this.allListenCounts[artist] = 0
+                }
+
+                walletService.sendTransaction(tx)
+            } catch (e: Exception) {
+                Log.e("DonationWalletLottery", "Error in lottery distribution: ${e.message}")
+            }
         }
 
         // Stop method to clean up resources
