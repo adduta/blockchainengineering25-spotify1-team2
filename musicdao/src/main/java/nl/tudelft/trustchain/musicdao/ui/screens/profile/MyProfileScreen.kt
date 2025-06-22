@@ -21,9 +21,10 @@ fun MyProfileScreen(
     bitcoinWalletViewModel: BitcoinWalletViewModel
 ) {
     val profile = profileScreenViewModel.profile.collectAsState()
+    val releases = profileScreenViewModel.releases.collectAsState()
 
     profile.value?.let {
-        Profile(it, navController = navController, bitcoinWalletViewModel = bitcoinWalletViewModel)
+        Profile(it, releases = releases.value, navController = navController, bitcoinWalletViewModel = bitcoinWalletViewModel)
     } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         EmptyState(
             firstLine = "You have not made a profile yet.",
