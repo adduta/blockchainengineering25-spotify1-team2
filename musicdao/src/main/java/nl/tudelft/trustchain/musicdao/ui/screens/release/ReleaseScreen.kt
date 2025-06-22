@@ -10,7 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Person
@@ -352,18 +351,19 @@ fun Header(
                         contentDescription = null
                     )
                 }
-                IconButton(
-                    onClick = {
-                        navController.navigate(
-                            Screen.Donate.createRoute(publicKey = album.publisher)
-                        )
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingCart,
-                        contentDescription = null
-                    )
-                }
+                // Direct Donations are not allowed at the moment!
+                // IconButton(
+                //     onClick = {
+                //         navController.navigate(
+                //             Screen.Donate.createRoute(publicKey = album.publisher)
+                //         )
+                //     }
+                // ) {
+                //     Icon(
+                //         imageVector = Icons.Default.ShoppingCart,
+                //         contentDescription = null
+                //     )
+                // }
 
                 var expanded by remember { mutableStateOf(false) }
                 Box(modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.TopStart)) {
@@ -386,15 +386,16 @@ fun Header(
                         ) {
                             Text("View Artist")
                         }
-                        DropdownMenuItem(
-                            onClick = {
-                                navController.navigate(
-                                    Screen.Donate.createRoute(publicKey = album.publisher)
-                                )
-                            }
-                        ) {
-                            Text("Donate")
-                        }
+                        // Direct Donations are not allowed at the moment!
+                        // DropdownMenuItem(
+                        //     onClick = {
+                        //         navController.navigate(
+                        //             Screen.Donate.createRoute(publicKey = album.publisher)
+                        //         )
+                        //     }
+                        // ) {
+                        //     Text("Donate")
+                        // }
                         DropdownMenuItem(onClick = { }) {
                             Text("View Meta-data")
                         }

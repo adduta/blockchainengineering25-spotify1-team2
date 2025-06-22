@@ -21,7 +21,6 @@ import androidx.navigation.NavController
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Artist
 import nl.tudelft.trustchain.musicdao.ui.components.releases.NonLazyReleaseList
-import nl.tudelft.trustchain.musicdao.ui.navigation.Screen
 import nl.tudelft.trustchain.musicdao.core.model.AccountType
 import nl.tudelft.trustchain.musicdao.ui.components.TierStatusBadge
 import java.time.format.DateTimeFormatter
@@ -62,6 +61,7 @@ fun Profile(
     val accountType by viewModel.accountType.collectAsState()
     val validUntil by viewModel.validUntil.collectAsState()
     var showUpgradeDialog by remember { mutableStateOf(false) }
+    val donationAddress by bitcoinWalletViewModel.donationAddress.collectAsState()
 
     Column(
         modifier =
@@ -153,6 +153,7 @@ fun Profile(
 
                         if (accountType == AccountType.BASIC && viewModel.isOwnProfile()) {
                             Button(
+                                enabled = donationAddress != "",
                                 onClick = { showUpgradeDialog = true },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -210,15 +211,16 @@ fun Profile(
                 OutlinedButton(onClick = { }, modifier = Modifier.padding(end = 10.dp)) {
                     Text(text = "Follow")
                 }
-                OutlinedButton(onClick = {
-                    navController.navigate(
-                        Screen.Donate.createRoute(
-                            publicKey = artist.publicKey
-                        )
-                    )
-                }) {
-                    Text(text = "Donate")
-                }
+                // Direct Donations are not allowed at the moment!
+                // OutlinedButton(onClick = {
+                //     navController.navigate(
+                //         Screen.Donate.createRoute(
+                //             publicKey = artist.publicKey
+                //         )
+                //     )
+                // }) {
+                //     Text(text = "Donate")
+                // }
             }
 
             Column(modifier = Modifier.padding(bottom = 20.dp)) {

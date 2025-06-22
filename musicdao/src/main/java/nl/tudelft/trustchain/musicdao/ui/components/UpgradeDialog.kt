@@ -67,7 +67,7 @@ fun UpgradeDialog(
                             text = "Upgrade to Pro",
                             style = MaterialTheme.typography.h5,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colors.primary
+                            color = MaterialTheme.colors.primary,
                         )
                     }
                 }

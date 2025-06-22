@@ -2,6 +2,7 @@ package nl.tudelft.trustchain.musicdao.core.services
 
 import nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier.UserTierBlockRepository
 import nl.tudelft.trustchain.musicdao.ui.screens.wallet.BitcoinWalletViewModel
+import nl.tudelft.trustchain.musicdao.core.wallet.DonationWalletManager
 import javax.inject.Inject
 import android.util.Log
 import org.bitcoinj.core.Coin
@@ -9,7 +10,8 @@ import org.bitcoinj.core.Coin
 class UserTierService
     @Inject
     constructor(
-        private val userTierBlockRepository: UserTierBlockRepository
+        private val userTierBlockRepository: UserTierBlockRepository,
+        private val donationWalletManager: DonationWalletManager
     ) {
         suspend fun upgradeToPro(
             userId: String,
@@ -36,7 +38,7 @@ class UserTierService
                 Log.d("UserTierService", "Sending payment of 0.1 BTC")
                 val paymentSuccess =
                     bitcoinWalletViewModel.walletService.sendCoins(
-                        "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
+                        donationWalletManager.globalDonationAddress,
                         "0.1"
                     )
 
