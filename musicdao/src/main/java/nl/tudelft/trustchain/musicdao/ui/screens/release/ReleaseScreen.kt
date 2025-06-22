@@ -274,7 +274,7 @@ fun ReleaseScreen(
                                     style = MaterialTheme.typography.body2,
                                     textAlign = TextAlign.Center
                                 )
-                            } else if(accessReason == ReleaseScreenViewModel.AccessReason.NO_MAGNET) {
+                            } else if (accessReason == ReleaseScreenViewModel.AccessReason.NO_MAGNET) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "If you just upgraded your account, new releases might take a while to load.",

@@ -177,20 +177,25 @@ class MusicCommunity(
 
                     if (hasAccess && albumEntity.magnet.isNotEmpty() && albumEntity.magnet != "access_restricted") {
                         // If user has access and we have the magnet link, send it back
-                        val response = MagnetResponseMessage(
-                            releaseId = request.releaseId,
-                            magnetLink = albumEntity.magnet
-                        )
+                        val response =
+                            MagnetResponseMessage(
+                                releaseId = request.releaseId,
+                                magnetLink = albumEntity.magnet
+                            )
 
-                        val responsePacket = serializePacket(
-                            MessageId.MAGNET_RESPONSE_MESSAGE,
-                            response
-                        )
+                        val responsePacket =
+                            serializePacket(
+                                MessageId.MAGNET_RESPONSE_MESSAGE,
+                                response
+                            )
 
                         send(peer, responsePacket)
                         Log.d("MusicCommunity", "Sent magnet link for release ${request.releaseId} to peer ${peer.mid}")
                     } else {
-                        Log.d("MusicCommunity", "Access denied for release ${request.releaseId} to peer ${peer.mid} or magnet link unavailable")
+                        Log.d(
+                            "MusicCommunity",
+                            "Access denied for release ${request.releaseId} to peer ${peer.mid} or magnet link unavailable"
+                        )
                     }
                 } else {
                     Log.d("MusicCommunity", "Release ${request.releaseId} not found in local database")
@@ -205,7 +210,10 @@ class MusicCommunity(
      * Check if the requesting user has access to the given album
      * This is the server-side access control that cannot be bypassed
      */
-    private fun checkUserAccess(userPublicKey: ByteArray, albumEntity: AlbumEntity): Boolean {
+    private fun checkUserAccess(
+        userPublicKey: ByteArray,
+        albumEntity: AlbumEntity
+    ): Boolean {
         try {
             Log.d("MusicCommunity", "Checking access for user ${userPublicKey.toHex()} to album ${albumEntity.id}")
             Log.d("MusicCommunity", "Album isExclusive: ${albumEntity.isExclusive}, releaseDate: ${albumEntity.releaseDate}")
@@ -319,7 +327,12 @@ class MusicCommunity(
             return false
         }
 
-        Log.d("MusicCommunity", "Valid tier block found for user ${userPublicKey.toHex()}: tier=${validTierBlock.tier}, validFrom=${validTierBlock.validFrom}, validUntil=${validTierBlock.validUntil}")
+        Log.d(
+            "MusicCommunity",
+            "Valid tier block found for user ${userPublicKey.toHex()}: " +
+                "tier=${validTierBlock.tier}, validFrom=${validTierBlock.validFrom}, " +
+                "validUntil=${validTierBlock.validUntil}"
+        )
 
         // Both PRO and ULTIMATE users have access to PRO features
         val isPro = validTierBlock.tier == "PRO" || validTierBlock.tier == "ULTIMATE"
@@ -361,9 +374,10 @@ class MusicCommunity(
         val allUserTierBlocks = database.getBlocksWithType(UserTierBlock.BLOCK_TYPE)
         Log.d("MusicCommunity", "Found ${allUserTierBlocks.size} total user tier blocks in database")
 
-        val userBlocks = allUserTierBlocks
-            .filter { it.publicKey.contentEquals(userPublicKey) }
-            .map { toBlock(it) }
+        val userBlocks =
+            allUserTierBlocks
+                .filter { it.publicKey.contentEquals(userPublicKey) }
+                .map { toBlock(it) }
 
         Log.d("MusicCommunity", "Found ${userBlocks.size} user tier blocks for user ${userPublicKey.toHex()}")
         return userBlocks

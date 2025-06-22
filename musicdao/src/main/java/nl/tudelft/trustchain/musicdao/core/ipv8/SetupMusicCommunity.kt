@@ -24,7 +24,7 @@ class SetupMusicCommunity
                 ReleasePublishBlockSigner.BLOCK_TYPE,
                 releasePublishBlockSigner
             )
-            
+
             // Register user tier block validator and signer
             musicCommunity.registerTransactionValidator(
                 "user_tier",

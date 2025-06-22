@@ -28,7 +28,12 @@ class UserTierBlockGossiper
             val randomPeer = pickRandomPeer()
             val userTierBlocks =
                 musicCommunity.database.getBlocksWithType(UserTierBlock.BLOCK_TYPE)
-                    .filter { userTierBlockValidator.validate(it, musicCommunity.database) is nl.tudelft.ipv8.attestation.trustchain.validation.ValidationResult.Valid }
+                    .filter {
+                        userTierBlockValidator.validate(
+                            it,
+                            musicCommunity.database
+                        ) is nl.tudelft.ipv8.attestation.trustchain.validation.ValidationResult.Valid
+                    }
                     .shuffled()
                     .take(Config.BLOCKS)
             userTierBlocks.forEach {

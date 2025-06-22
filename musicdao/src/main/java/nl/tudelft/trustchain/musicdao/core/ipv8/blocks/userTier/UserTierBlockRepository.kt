@@ -35,11 +35,12 @@ class UserTierBlockRepository
                 Log.d("UserTierBlockRepository", "Creating UserTierBlock for $userId with tier $tier")
                 Log.d("UserTierBlockRepository", "Transaction: $transaction")
 
-                val block = musicCommunity.createProposalBlock(
-                    blockType = UserTierBlock.BLOCK_TYPE,
-                    transaction = transaction,
-                    publicKey = musicCommunity.myPeer.publicKey.keyToBin()
-                )
+                val block =
+                    musicCommunity.createProposalBlock(
+                        blockType = UserTierBlock.BLOCK_TYPE,
+                        transaction = transaction,
+                        publicKey = musicCommunity.myPeer.publicKey.keyToBin()
+                    )
 
                 return block
             } catch (e: Exception) {

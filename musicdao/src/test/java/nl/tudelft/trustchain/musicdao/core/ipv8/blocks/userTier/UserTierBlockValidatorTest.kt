@@ -21,12 +21,13 @@ class UserTierBlockValidatorTest {
     @Test
     fun `test validate returns valid for correct PRO tier block`() {
         val block = mockk<TrustChainBlock>()
-        val transaction = mapOf(
-            "userId" to "test_user",
-            "tier" to "PRO",
-            "validFrom" to 1000L,
-            "validUntil" to 2000L
-        )
+        val transaction =
+            mapOf(
+                "userId" to "test_user",
+                "tier" to "PRO",
+                "validFrom" to 1000L,
+                "validUntil" to 2000L
+            )
 
         every { block.transaction } returns transaction
 
@@ -38,12 +39,13 @@ class UserTierBlockValidatorTest {
     @Test
     fun `test validate returns valid for correct ULTIMATE tier block`() {
         val block = mockk<TrustChainBlock>()
-        val transaction = mapOf(
-            "userId" to "test_user",
-            "tier" to "ULTIMATE",
-            "validFrom" to 1000L,
-            "validUntil" to null
-        )
+        val transaction =
+            mapOf(
+                "userId" to "test_user",
+                "tier" to "ULTIMATE",
+                "validFrom" to 1000L,
+                "validUntil" to null
+            )
 
         every { block.transaction } returns transaction
 
@@ -55,11 +57,12 @@ class UserTierBlockValidatorTest {
     @Test
     fun `test validate returns invalid for missing required fields`() {
         val block = mockk<TrustChainBlock>()
-        val transaction = mapOf(
-            "userId" to "test_user",
-            "tier" to "PRO"
-            // missing validFrom
-        )
+        val transaction =
+            mapOf(
+                "userId" to "test_user",
+                "tier" to "PRO"
+                // missing validFrom
+            )
 
         every { block.transaction } returns transaction
 
@@ -72,11 +75,12 @@ class UserTierBlockValidatorTest {
     @Test
     fun `test validate returns invalid for invalid tier`() {
         val block = mockk<TrustChainBlock>()
-        val transaction = mapOf(
-            "userId" to "test_user",
-            "tier" to "INVALID_TIER",
-            "validFrom" to 1000L
-        )
+        val transaction =
+            mapOf(
+                "userId" to "test_user",
+                "tier" to "INVALID_TIER",
+                "validFrom" to 1000L
+            )
 
         every { block.transaction } returns transaction
 
@@ -89,11 +93,12 @@ class UserTierBlockValidatorTest {
     @Test
     fun `test validate returns invalid for invalid validFrom timestamp`() {
         val block = mockk<TrustChainBlock>()
-        val transaction = mapOf(
-            "userId" to "test_user",
-            "tier" to "PRO",
-            "validFrom" to -1L
-        )
+        val transaction =
+            mapOf(
+                "userId" to "test_user",
+                "tier" to "PRO",
+                "validFrom" to -1L
+            )
 
         every { block.transaction } returns transaction
 
@@ -106,12 +111,13 @@ class UserTierBlockValidatorTest {
     @Test
     fun `test validate returns invalid when validUntil is before validFrom`() {
         val block = mockk<TrustChainBlock>()
-        val transaction = mapOf(
-            "userId" to "test_user",
-            "tier" to "PRO",
-            "validFrom" to 2000L,
-            "validUntil" to 1000L
-        )
+        val transaction =
+            mapOf(
+                "userId" to "test_user",
+                "tier" to "PRO",
+                "validFrom" to 2000L,
+                "validUntil" to 1000L
+            )
 
         every { block.transaction } returns transaction
 

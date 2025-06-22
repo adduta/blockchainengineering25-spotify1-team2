@@ -187,9 +187,7 @@ class AlbumRepository
             }
         }
 
-        fun requestMagnetLink(
-            release: Album
-        ): String? {
+        fun requestMagnetLink(release: Album): String? {
             try {
                 val releaseId = release.id
                 val userPublicKeyBytes = musicCommunity.publicKeyHex().hexToBytes()
@@ -210,7 +208,10 @@ class AlbumRepository
                     val peersCount = musicCommunity.requestMagnetLink(releaseId)
                     Log.d("AlbumRepository", "Sent magnet link request to $peersCount peers for release $releaseId")
                 } else {
-                    Log.d("AlbumRepository", "Skipping magnet link request for album $releaseId - user is not Pro and release is not past delay period")
+                    Log.d(
+                        "AlbumRepository",
+                        "Skipping magnet link request for album $releaseId - user is not Pro and release is not past delay period"
+                    )
                 }
             } catch (e: Exception) {
                 Log.e("AlbumRepository", "Error requesting magnet link for release ${release.id}: ${e.message}")
