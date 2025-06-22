@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
 import kotlinx.coroutines.runBlocking
+import nl.tudelft.trustchain.musicdao.core.wallet.DonationWalletManager
 import nl.tudelft.trustchain.musicdao.core.wallet.WalletService
 
 class UserTierServiceTest {
@@ -16,14 +17,17 @@ class UserTierServiceTest {
     private lateinit var bitcoinWalletViewModel: BitcoinWalletViewModel
     private lateinit var walletService: WalletService
     private lateinit var service: UserTierService
+    private lateinit var donationWalletManager: DonationWalletManager
 
     @BeforeEach
     fun setup() {
         userTierBlockRepository = mockk()
         bitcoinWalletViewModel = mockk()
         walletService = mockk()
+        donationWalletManager = mockk()
         every { bitcoinWalletViewModel.walletService } returns walletService
-        service = UserTierService(userTierBlockRepository)
+        every { donationWalletManager.globalDonationAddress } returns "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub"
+        service = UserTierService(userTierBlockRepository, donationWalletManager)
     }
 
     @Test
@@ -199,7 +203,7 @@ class UserTierServiceTest {
     @Test
     fun `test upgradeToUltimate fails when insufficient balance`() =
         runBlocking {
-            val balance = Coin.parseCoin("0.1") // Less than required 0.15
+            val balance = Coin.parseCoin("0.1") // Less than required 0.2
             every { bitcoinWalletViewModel.confirmedBalance.value } returns balance
 
             val result =
@@ -216,12 +220,12 @@ class UserTierServiceTest {
     @Test
     fun `test upgradeToUltimate fails when payment fails`() =
         runBlocking {
-            val balance = Coin.parseCoin("0.2") // More than required 0.15
+            val balance = Coin.parseCoin("0.2") // More than required 0.2
             every { bitcoinWalletViewModel.confirmedBalance.value } returns balance
             coEvery {
                 walletService.sendCoins(
                     "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
-                    "0.15"
+                    "0.2"
                 )
             } returns false
 
@@ -237,7 +241,7 @@ class UserTierServiceTest {
             coVerify {
                 walletService.sendCoins(
                     "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
-                    "0.15"
+                    "0.2"
                 )
             }
         }
@@ -250,7 +254,7 @@ class UserTierServiceTest {
             coEvery {
                 walletService.sendCoins(
                     "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
-                    "0.15"
+                    "0.2"
                 )
             } returns true
             coEvery {
@@ -274,7 +278,7 @@ class UserTierServiceTest {
             coVerify {
                 walletService.sendCoins(
                     "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
-                    "0.15"
+                    "0.2"
                 )
             }
             coVerify {
@@ -297,7 +301,7 @@ class UserTierServiceTest {
             coEvery {
                 walletService.sendCoins(
                     "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
-                    "0.15"
+                    "0.2"
                 )
             } returns true
             coEvery {
@@ -321,7 +325,7 @@ class UserTierServiceTest {
             coVerify {
                 walletService.sendCoins(
                     "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
-                    "0.15"
+                    "0.2"
                 )
             }
             coVerify {

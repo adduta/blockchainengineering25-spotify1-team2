@@ -1,10 +1,9 @@
-/*
 package nl.tudelft.trustchain.musicdao.core.ipv8.blocks.userTier
 
 import io.mockk.*
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
-import nl.tudelft.ipv8.attestation.trustchain.TrustChainStore
-import nl.tudelft.ipv8.attestation.trustchain.ValidationResult
+import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainStore
+import nl.tudelft.ipv8.attestation.trustchain.validation.ValidationResult
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
@@ -121,4 +120,4 @@ class UserTierBlockValidatorTest {
         assertTrue(result is ValidationResult.Invalid)
         assertTrue((result as ValidationResult.Invalid).errors.any { it.contains("validUntil must be greater than validFrom") })
     }
-} */
+}

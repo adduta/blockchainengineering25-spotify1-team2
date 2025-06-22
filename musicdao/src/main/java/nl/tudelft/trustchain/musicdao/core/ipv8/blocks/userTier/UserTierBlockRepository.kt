@@ -34,18 +34,13 @@ class UserTierBlockRepository
             return try {
                 Log.d("UserTierBlockRepository", "Creating UserTierBlock for $userId with tier $tier")
                 Log.d("UserTierBlockRepository", "Transaction: $transaction")
-                
+
                 val block = musicCommunity.createProposalBlock(
                     blockType = UserTierBlock.BLOCK_TYPE,
                     transaction = transaction,
                     publicKey = musicCommunity.myPeer.publicKey.keyToBin()
                 )
-                
-                Log.d("UserTierBlockRepository", "Successfully created UserTierBlock: ${block.blockId}")
-                Log.d("UserTierBlockRepository", "Block sequence number: ${block.sequenceNumber}")
-                Log.d("UserTierBlockRepository", "Block is self-signed: ${block.isSelfSigned}")
-                Log.d("UserTierBlockRepository", "Block is proposal: ${block.isProposal}")
-                
+
                 return block
             } catch (e: Exception) {
                 Log.e("UserTierBlockRepository", "Error creating UserTierBlock:", e)

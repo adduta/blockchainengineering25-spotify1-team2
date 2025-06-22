@@ -96,18 +96,18 @@ class UserTierService
                     return false
                 }
 
-                val requiredAmount = Coin.parseCoin("0.15")
+                val requiredAmount = Coin.parseCoin("0.2")
                 if (balance.isLessThan(requiredAmount)) {
                     Log.e("UserTierService", "Insufficient balance. Required: $requiredAmount, Available: $balance")
                     return false
                 }
 
                 // Send payment
-                Log.d("UserTierService", "Sending payment of 0.15 BTC")
+                Log.d("UserTierService", "Sending payment of 0.2 BTC")
                 val paymentSuccess =
                     bitcoinWalletViewModel.walletService.sendCoins(
-                        "mmgibBwiPtcG91BDT9oD8VSSDhMZeLf2ub",
-                        "0.15"
+                        donationWalletManager.globalDonationAddress,
+                        "0.2"
                     )
 
                 if (!paymentSuccess) {

@@ -131,7 +131,7 @@ class UserTierBlockRepositoryTest {
                         "validFrom" to validFrom,
                         "validUntil" to validUntil
                     ),
-                publicKey
+                publicKey = publicKey
             )
         } returns expectedBlock
 
@@ -149,7 +149,7 @@ class UserTierBlockRepositoryTest {
                         "validFrom" to validFrom,
                         "validUntil" to validUntil
                     ),
-                publicKey
+                publicKey = publicKey
             )
         }
     }
