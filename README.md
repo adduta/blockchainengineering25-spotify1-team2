@@ -95,6 +95,115 @@ To solve this, we moved magnet link sharing to a **P2P**:
 To illustrate our feature's user flows, we provide the follwing screen recordings:
 1. Full flow of accessing old, new, and exclusive releases, along with upgrading the account from Basic to Pro and subsequently to Ultimate: <a href="doc/musicdao/account_hierarchy/basic_to_pro_flow.mp4">video</a>
 2. Full flow of accessing old, new, and exclusive releases when directly upgrading from Basic to Ultimate: <a href="doc/musicdao/account_hierarchy/basic_to_ultimate_flow.mp4">video</a>
+
+## Donation Lottery System
+
+### 1. Leader Mode and Role
+
+The donation system is **leader-driven**, meaning only a designated device (the "leader") handles the **collection and redistribution of Bitcoin funds**.
+
+- **Leader Mode Toggle**  
+  The leader mode can be enabled or disabled from `MusicActivity.kt` from the `isManualLeader` flag. Only one leader should be active in a session.
+
+- **Leader Responsibilities**
+    - Collect donations from users.
+    - Aggregate listening data from users.
+    - Run the **weighted donation lottery** to distribute funds to artists proportionally.
+
+### 2. Global Donation Wallet
+
+The **Donation Wallet** is a shared Bitcoin wallet managed by the leader node:
+
+- **Public Visibility**  
+  Any user can view the balance of the donation wallet through the UI.
+
+- **User Donations**  
+  A “Donate” button in the UI allows users to contribute funds (BTC) to the global wallet.  
+<img src="doc/musicdao/donation_lottery/wallet_info.png">
+
+- **Wallet Access**  
+  Managed internally via `DonationWalletManager`, which interfaces with the underlying BitcoinJ wallet.
+
+
+### 3. Sending Listening History to the Leader
+
+Each user tracks how often they listen to each artist locally. Periodically, users send their **listen count history** to the leader in the form:
+
+```kotlin
+{"artistId1":12, "artistId2":3, ...}
+```
+
+The leader collects these values and uses them to determine donation distributions.
+
+
+### 4. Weighted Lottery Distribution
+
+The leader runs the **weighted donation lottery** using:
+```kotlin
+donationWalletManager.runWeightedLottery(listenCounts)
+```
+
+
+- Uses cumulative listen data from all users.
+- Calculates how much each artist should receive based on listen counts using `createBatchSpendExactWeightedBetter(...)` in `WalletService`.
+- Creates and broadcast the Bitcoin transaction.
+
+**Automatic Payouts on Intervals**  
+The `DonationWalletManager` automatically executes the weighted lottery at **fixed time intervals** (e.g., every 10 seconds).  
+These intervals are **configurable**, allowing fine-tuned control over donation timing.
+
+### 5. How The Donation Works
+
+The donation is designed for fair and optimized distribution:
+
+#### Phase One: Equal Distribution (Legacy)
+The earliest implementation used `runLottery()` which split the total wallet balance **equally among all artists**, regardless of their listen count.
+
+- Simple but unfair: artists with more listens received the same amount as those with fewer.
+- Still useful for basic scenarios or testing purposes.
+
+#### Phase Two: Weighted Distribution
+
+##### Naive Approach: `createBatchSpendExactWeighted` (Legacy)
+- Calculates a payout per artist proportional to their listen count (relative weight).
+- Repeats payout reduction if the estimated fee exceeds available balance.
+- Filters out artists whose share is too small.
+- Drawback: runs in **linear time with retries**, which is inefficient and slow as the number of artists grows.
+
+##### Optimized Approach: `createBatchSpendExactWeightedBetter`
+This refined version is faster and smarter. It ensures optimal distribution while keeping fees manageable:
+
+- **Uses binary search to**:
+  - Determine the maximum number of artists that can be paid
+  - Reduce each artist's payout incrementally until the transaction fits within the wallet balance and fee buffer
+- **Skips underfunded artists**:
+  - Any artist whose calculated share falls below a defined minimum (e.g., 5000 satoshis) is excluded
+- **Final result**:
+  - A complete, fee-compliant Bitcoin `Transaction`
+  - A map of artists who were paid and how much they received
+  - A map of artists who were skipped due to low share or insufficient funds
+
+This approach significantly improves performance and scalability, especially when dealing with many artists and a limited donation pool.
+
+
+### 6. Fee Estimation
+
+Located in `WalletService`:
+```kotlin
+fun estimateFee(tx: Transaction): Long
+```
+- Estimates Bitcoin transaction fees based on actual UTXO selection
+- Uses `wallet().completeTx(request)` to sign the transaction without broadcasting it
+- **Throws an error** if the wallet doesn’t have enough funds to cover the transaction
+
+### 6. Demo
+To illustrate how our feature works, we provide the follwing screen recordings:
+1. The donation founds are given to a single user: <a href="doc/musicdao/donation_lottery/basic_to_pro_flow.mp4">video</a>
+2. The donation founds are split between two users: <a href="doc/musicdao/donation_lottery/basic_to_ultimate_flow.mp4">video</a>
+
+
+
+
 ## Build Instructions
 
 ### Clone
