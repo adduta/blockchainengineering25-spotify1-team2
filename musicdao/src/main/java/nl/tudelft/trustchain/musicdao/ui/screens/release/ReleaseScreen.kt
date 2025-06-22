@@ -249,16 +249,17 @@ fun ReleaseScreen(
                                         ReleaseScreenViewModel.AccessReason.WAITING_PERIOD -> "This release will be available soon"
                                         ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "Something went wrong, try again later"
                                         ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
+                                        ReleaseScreenViewModel.AccessReason.EXCLUSIVE -> "This is an exclusive release"
                                         null -> "Release not available for download"
                                         else -> "Loading..."
                                     },
                                 style = MaterialTheme.typography.h6,
                                 color = MaterialTheme.colors.error
                             )
-                            if (accessReason == ReleaseScreenViewModel.AccessReason.RESTRICTED) {
+                            if (accessReason == ReleaseScreenViewModel.AccessReason.EXCLUSIVE) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Upgrade to Pro to access this release immediately, or wait for the release period to end",
+                                    text = "Upgrade to Ultimate to access this release",
                                     style = MaterialTheme.typography.body2,
                                     textAlign = TextAlign.Center
                                 )

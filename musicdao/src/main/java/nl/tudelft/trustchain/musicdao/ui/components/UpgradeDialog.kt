@@ -96,11 +96,6 @@ fun UpgradeDialog(
                         title = "All Pro Features",
                         description = "Includes all Pro tier benefits"
                     )
-                    BenefitItem(
-                        icon = Icons.Outlined.Star,
-                        title = "Priority Support",
-                        description = "Get priority support from our team"
-                    )
                 } else {
                     BenefitItem(
                         icon = Icons.Outlined.Star,
@@ -111,11 +106,6 @@ fun UpgradeDialog(
                         icon = Icons.Outlined.Star,
                         title = "No Waiting Period",
                         description = "Skip the 7-day waiting period"
-                    )
-                    BenefitItem(
-                        icon = Icons.Outlined.Star,
-                        title = "Support Artists",
-                        description = "Directly support your favorite artists"
                     )
                 }
 
