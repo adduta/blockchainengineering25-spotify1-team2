@@ -16,7 +16,8 @@ class ArtistRepository
     constructor(
         private val artistAnnounceBlockRepository: ArtistAnnounceBlockRepository,
         private val albumRepository: AlbumRepository,
-        private val musicCommunity: MusicCommunity
+        private val musicCommunity: MusicCommunity,
+        private val releaseRepository: ReleaseRepository
     ) {
         val stateFlows: MutableMap<String, MutableStateFlow<Artist?>> = mutableMapOf()
 

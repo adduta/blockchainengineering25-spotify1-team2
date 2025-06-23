@@ -1,11 +1,13 @@
 package nl.tudelft.trustchain.musicdao.ui.screens.search
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.core.repositories.AlbumRepository
+import nl.tudelft.trustchain.musicdao.core.repositories.ReleaseRepository
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -20,6 +22,7 @@ class SearchScreenViewModel
     @Inject
     constructor(
         private val albumRepository: AlbumRepository,
+        private val releaseRepository: ReleaseRepository,
         private val musicCommunity: MusicCommunity
     ) : ViewModel() {
         private val _isRefreshing: MutableLiveData<Boolean> = MutableLiveData()
@@ -41,9 +44,10 @@ class SearchScreenViewModel
 
         init {
             viewModelScope.launch {
-                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums())
+                val userPublicKey = musicCommunity.publicKeyHex()
+                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums(userPublicKey, releaseRepository))
                 _peerAmount.value = musicCommunity.getPeers().size
-                _totalReleaseAmount.value = albumRepository.getAlbums().size
+                _totalReleaseAmount.value = albumRepository.getAlbums(userPublicKey, releaseRepository).size
             }
         }
 
@@ -68,12 +72,10 @@ class SearchScreenViewModel
         }
 
         private suspend fun search(searchText: String) {
-            if (searchText.isEmpty()) {
-                _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums())
-            } else {
-                val result = albumRepository.searchAlbums(searchText)
-                _searchResult.value = downloadedFirstInListOfAlbums(result)
-            }
+            val userPublicKey = musicCommunity.publicKeyHex()
+            val albums = albumRepository.getAlbums(userPublicKey, releaseRepository, searchText)
+            _searchResult.value = downloadedFirstInListOfAlbums(albums)
+            refreshMagnetLinks(albums)
         }
 
         fun refresh() {
@@ -81,11 +83,38 @@ class SearchScreenViewModel
                 _isRefreshing.value = true
                 delay(500)
                 if (_searchQuery.value.isEmpty()) {
-                    _searchResult.value = downloadedFirstInListOfAlbums(albumRepository.getAlbums())
+                    val userPublicKey = musicCommunity.publicKeyHex()
+                    val albums = albumRepository.getAlbums(userPublicKey, releaseRepository)
+                    _searchResult.value = downloadedFirstInListOfAlbums(albums)
+                    _totalReleaseAmount.value = albums.size
+                    refreshMagnetLinks(albums)
                 }
                 _peerAmount.value = musicCommunity.getPeers().size
-                _totalReleaseAmount.value = albumRepository.getAlbums().size
                 _isRefreshing.value = false
+            }
+        }
+
+        /**
+         * Refresh magnet links for all albums
+         */
+        private fun refreshMagnetLinks(albums: List<Album>) {
+            viewModelScope.launch {
+                albums.forEach { album ->
+                    if (album.magnet == null ||
+                        album.magnet.isEmpty() ||
+                        album.magnet.isBlank() ||
+                        album.magnet == "access_restricted" ||
+                        album.magnet == "null" ||
+                        album.magnet == "undefined"
+                    ) {
+                        try {
+                            albumRepository.requestMagnetLink(album)
+                        } catch (e: Exception) {
+                            // Log error if needed
+                            Log.e("SearchScreenViewModel", "Could not fetch the magnetLink")
+                        }
+                    }
+                }
             }
         }
 

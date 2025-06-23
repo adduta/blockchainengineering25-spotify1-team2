@@ -5,22 +5,33 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Album
 import nl.tudelft.trustchain.musicdao.core.repositories.model.Artist
 import nl.tudelft.trustchain.musicdao.ui.components.releases.NonLazyReleaseList
-import nl.tudelft.trustchain.musicdao.ui.navigation.Screen
+import nl.tudelft.trustchain.musicdao.core.model.AccountType
+import nl.tudelft.trustchain.musicdao.ui.components.TierStatusBadge
+import java.time.format.DateTimeFormatter
+import java.time.ZoneId
+import androidx.lifecycle.viewmodel.compose.viewModel
+import nl.tudelft.trustchain.musicdao.ui.components.UpgradeDialog
+import android.app.Activity
+import androidx.compose.ui.platform.LocalContext
+import nl.tudelft.trustchain.musicdao.MusicActivity
+import dagger.hilt.android.EntryPointAccessors
+import nl.tudelft.trustchain.musicdao.ui.screens.wallet.BitcoinWalletViewModel
 
 @ExperimentalFoundationApi
 @ExperimentalMaterialApi
@@ -28,8 +39,31 @@ import nl.tudelft.trustchain.musicdao.ui.navigation.Screen
 fun Profile(
     artist: Artist,
     releases: List<Album> = listOf(),
-    navController: NavController
+    navController: NavController,
+    bitcoinWalletViewModel: BitcoinWalletViewModel
 ) {
+    val viewModelFactory =
+        EntryPointAccessors.fromActivity(
+            LocalContext.current as Activity,
+            MusicActivity.ViewModelFactoryProvider::class.java
+        ).profileScreenViewModelFactory()
+
+    val viewModel: ProfileScreenViewModel =
+        viewModel(
+            factory =
+                ProfileScreenViewModel.provideFactory(
+                    viewModelFactory,
+                    publicKey = artist.publicKey,
+                    bitcoinWalletViewModel = bitcoinWalletViewModel
+                )
+        )
+
+    val accountType by viewModel.accountType.collectAsState()
+    val validUntil by viewModel.validUntil.collectAsState()
+    var showUpgradeDialog by remember { mutableStateOf(false) }
+    var showUltimateUpgradeDialog by remember { mutableStateOf(false) }
+    val donationAddress by bitcoinWalletViewModel.donationAddress.collectAsState()
+
     Column(
         modifier =
             Modifier
@@ -41,7 +75,14 @@ fun Profile(
                 Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .background(Brush.verticalGradient(listOf(Color(0xFF77DF7C), Color(0xFF70C774))))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFF77DF7C),
+                                Color(0xFF70C774)
+                            )
+                        )
+                    )
         ) {
             Text(
                 text = artist.name,
@@ -56,13 +97,196 @@ fun Profile(
         }
 
         Column(modifier = Modifier.padding(20.dp)) {
+            // Account Status Section
+            if (viewModel.isOwnProfile()) {
+                Card(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                    elevation = 4.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Account Status",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TierStatusBadge(
+                                tier = accountType,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+
+                            Text(
+                                text =
+                                    when (accountType) {
+                                        AccountType.ULTIMATE -> "Ultimate Account"
+                                        AccountType.PRO -> "Pro Account"
+                                        AccountType.BASIC -> "Basic Account"
+                                    },
+                                fontSize = 16.sp
+                            )
+                        }
+
+                        if ((accountType == AccountType.PRO || accountType == AccountType.ULTIMATE) && validUntil != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val formattedDate =
+                                validUntil?.let { instant ->
+                                    instant.atZone(ZoneId.systemDefault())
+                                        .toLocalDate()
+                                        .format(DateTimeFormatter.ISO_LOCAL_DATE)
+                                } ?: "Unknown"
+                            Text(
+                                text = "Valid until: $formattedDate",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (viewModel.isOwnProfile()) {
+                            when (accountType) {
+                                AccountType.BASIC -> {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Button(
+                                            enabled = donationAddress != "",
+                                            onClick = { showUpgradeDialog = true },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Star,
+                                                contentDescription = null,
+                                                modifier = Modifier.padding(end = 8.dp)
+                                            )
+                                            Text("Upgrade to Pro")
+                                        }
+                                        Button(
+                                            enabled = donationAddress != "",
+                                            onClick = { showUltimateUpgradeDialog = true },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Star,
+                                                contentDescription = null,
+                                                modifier = Modifier.padding(end = 8.dp)
+                                            )
+                                            Text("Upgrade to Ultimate")
+                                        }
+                                    }
+                                }
+                                AccountType.PRO -> {
+                                    Button(
+                                        onClick = { showUltimateUpgradeDialog = true },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(end = 8.dp)
+                                        )
+                                        Text("Upgrade to Ultimate")
+                                    }
+                                }
+                                AccountType.ULTIMATE -> {
+                                    // Ultimate users don't need upgrade button
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Benefits Section
+            if (viewModel.isOwnProfile() && accountType == AccountType.BASIC) {
+                Card(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                    elevation = 4.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Pro Benefits",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        ProBenefitItem(
+                            title = "Instant Access",
+                            description = "Get immediate access to new releases"
+                        )
+
+                        ProBenefitItem(
+                            title = "No Waiting Period",
+                            description = "Skip the 7-day waiting period for basic users"
+                        )
+                    }
+                }
+            }
+
+            if (viewModel.isOwnProfile() && (accountType == AccountType.PRO || accountType == AccountType.BASIC)) {
+                Card(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                    elevation = 4.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Ultimate Benefits",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        UltimateBenefitItem(
+                            title = "All Pro Benefits",
+                            description = "Includes all benefits of Pro account"
+                        )
+
+                        UltimateBenefitItem(
+                            title = "Exclusive Content",
+                            description = "Access to exclusive content from all artists"
+                        )
+                    }
+                }
+            }
+
             Row(modifier = Modifier.padding(bottom = 20.dp)) {
                 OutlinedButton(onClick = { }, modifier = Modifier.padding(end = 10.dp)) {
                     Text(text = "Follow")
                 }
-                OutlinedButton(onClick = { navController.navigate(Screen.Donate.createRoute(publicKey = artist.publicKey)) }) {
-                    Text(text = "Donate")
-                }
+                // Direct Donations are not allowed at the moment!
+                // OutlinedButton(onClick = {
+                //     navController.navigate(
+                //         Screen.Donate.createRoute(
+                //             publicKey = artist.publicKey
+                //         )
+                //     )
+                // }) {
+                //     Text(text = "Donate")
+                // }
             }
 
             Column(modifier = Modifier.padding(bottom = 20.dp)) {
@@ -88,6 +312,93 @@ fun Profile(
                 Text(text = "Biography", fontWeight = FontWeight.Bold)
                 Text(text = artist.biography)
             }
+        }
+    }
+
+    if (showUpgradeDialog && viewModel.isOwnProfile()) {
+        val currentBalance by bitcoinWalletViewModel.confirmedBalance.collectAsState()
+        UpgradeDialog(
+            onDismiss = { showUpgradeDialog = false },
+            onUpgrade = {
+                viewModel.upgradeToPro()
+                showUpgradeDialog = false
+            },
+            currentBalance = currentBalance
+        )
+    }
+
+    if (showUltimateUpgradeDialog && viewModel.isOwnProfile()) {
+        val currentBalance by bitcoinWalletViewModel.confirmedBalance.collectAsState()
+        UpgradeDialog(
+            onDismiss = { showUltimateUpgradeDialog = false },
+            onUpgrade = {
+                viewModel.upgradeToUltimate()
+                showUltimateUpgradeDialog = false
+            },
+            currentBalance = currentBalance,
+            isUltimate = true
+        )
+    }
+}
+
+@Composable
+private fun ProBenefitItem(
+    title: String,
+    description: String
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Star,
+            contentDescription = null,
+            tint = MaterialTheme.colors.primary,
+            modifier = Modifier.padding(end = 8.dp)
+        )
+        Column {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = description,
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun UltimateBenefitItem(
+    title: String,
+    description: String
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Star,
+            contentDescription = null,
+            tint = MaterialTheme.colors.secondary,
+            modifier = Modifier.padding(end = 8.dp)
+        )
+        Column {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = description,
+                color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+            )
         }
     }
 }

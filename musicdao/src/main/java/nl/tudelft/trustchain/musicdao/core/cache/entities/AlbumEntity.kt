@@ -9,6 +9,7 @@ import java.time.Instant
 @Entity
 data class AlbumEntity(
     @PrimaryKey val id: String,
+    // For artist: full magnet link, For others: "access_restricted"
     val magnet: String,
     val title: String,
     val artist: String,
@@ -19,7 +20,8 @@ data class AlbumEntity(
     val root: String?,
     val isDownloaded: Boolean,
     val infoHash: String?,
-    val torrentPath: String?
+    val torrentPath: String?,
+    val isExclusive: Boolean = false
 ) {
     fun toAlbum(): Album {
         return Album(
@@ -49,7 +51,8 @@ data class AlbumEntity(
                             null
                         }
                     }
-                }
+                },
+            isExclusive = isExclusive
         )
     }
 }

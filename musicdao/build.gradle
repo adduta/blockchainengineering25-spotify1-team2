@@ -54,6 +54,9 @@ android {
 
     testOptions {
         unitTests.returnDefaultValues = true
+        unitTests.all {
+            useJUnitPlatform()
+        }
     }
 
     packagingOptions {
@@ -94,10 +97,17 @@ dependencies {
 
     // Cryptocurrency integration
     api 'org.bitcoinj:bitcoinj-core:0.15.10'
+    implementation project(':currencyii')
 
     // Testing
     testImplementation "io.mockk:mockk:$mockk_version"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
+    testImplementation "org.junit.jupiter:junit-jupiter-api:5.8.2"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:5.8.2"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.8.2"
+    testImplementation "org.junit.jupiter:junit-jupiter-migrationsupport:5.8.2"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3"
 
     // Reading MP3 metadata
     api 'com.mpatric:mp3agic:0.9.1'
@@ -179,6 +189,7 @@ dependencies {
     implementation 'com.google.guava:guava:31.0.1-android'
     implementation 'commons-io:commons-io:2.4'
     kapt 'com.google.dagger:dagger-compiler:2.50'
+    implementation "org.jetbrains.kotlin:kotlin-test:1.9.22"
 }
 
 repositories {

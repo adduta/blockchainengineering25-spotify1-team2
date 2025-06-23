@@ -52,14 +52,14 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
-    signingConfigs {
-        release {
-            keyAlias "trustchain"
-            keyPassword "N/A"
-            storeFile file("build.keystore")
-            storePassword "N/A"
-        }
-    }
+    // signingConfigs {
+    //     release {
+    //         keyAlias "trustchain"
+    //         keyPassword "N/A"
+    //         storeFile file("build.keystore")
+    //         storePassword "N/A"
+    //     }
+    // }
 
     sourceSets {
         main {
@@ -71,7 +71,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            // signingConfig signingConfigs.release
         }
         debug {
             applicationIdSuffix ".debug"

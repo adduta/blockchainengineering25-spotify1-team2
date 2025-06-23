@@ -39,7 +39,8 @@ class ReleasePublishBlockValidator
 
             return (
                 releaseId is String && releaseId.isNotEmpty() && transaction.containsKey("releaseId") &&
-                    magnet is String && magnet.isNotEmpty() && transaction.containsKey("magnet") &&
+                    // Delete check for magnet as it is not required in the current version
+                    transaction.containsKey("magnet") &&
                     title is String && title.isNotEmpty() && transaction.containsKey("title") &&
                     artist is String && artist.isNotEmpty() && transaction.containsKey("artist") &&
                     publisher is String && publisher.isNotEmpty() && transaction.containsKey("publisher") &&

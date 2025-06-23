@@ -10,7 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Person
@@ -25,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -39,7 +39,8 @@ import nl.tudelft.trustchain.musicdao.ui.util.dateToShortString
 import nl.tudelft.trustchain.musicdao.ui.navigation.Screen
 import nl.tudelft.trustchain.musicdao.ui.screens.torrent.TorrentStatusScreen
 import dagger.hilt.android.EntryPointAccessors
-import java.io.File
+import android.util.Log
+import nl.tudelft.trustchain.musicdao.core.util.ListenCounter
 
 @ExperimentalMaterialApi
 @Composable
@@ -72,15 +73,19 @@ fun ReleaseScreen(
 
     fun play(
         track: Song,
-        cover: File?
+        album: Album
     ) {
-        playerViewModel.playDownloadedTrack(track, cover)
+        ListenCounter.increment(context, album.publisher)
+        Log.d("Counter", "Counter: ${ListenCounter.getCount(context, album.publisher)}")
+        playerViewModel.playDownloadedTrack(track, album.cover)
     }
 
     fun play(
         track: DownloadingTrack,
-        cover: File?
+        album: Album
     ) {
+        ListenCounter.increment(context, album.publisher)
+        Log.d("Counter", "Counter: ${ListenCounter.getCount(context, album.publisher)}")
         playerViewModel.playDownloadingTrack(
             Song(
                 file = track.file,
@@ -88,7 +93,7 @@ fun ReleaseScreen(
                 title = track.title
             ),
             context,
-            cover
+            album.cover
         )
     }
 
@@ -108,7 +113,7 @@ fun ReleaseScreen(
                             ?: return@collect
 
                     if (!isPlaying && targetTrack.progress > 20 && targetTrack.progress < 99) {
-                        play(targetTrack, album.cover)
+                        play(targetTrack, album)
                     }
                 }
             }
@@ -170,7 +175,7 @@ fun ReleaseScreen(
                                     contentDescription = null
                                 )
                             },
-                            modifier = Modifier.clickable { play(it, album.cover) }
+                            modifier = Modifier.clickable { play(it, album) }
                         )
                     }
                 } else {
@@ -193,7 +198,7 @@ fun ReleaseScreen(
                                 },
                                 modifier =
                                     Modifier.clickable {
-                                        play(it, album.cover)
+                                        play(it, album)
                                     }
                             )
                         }
@@ -211,10 +216,74 @@ fun ReleaseScreen(
             }
             if (state == 1) {
                 val current = torrentStatus
-                if (current != null) {
-                    TorrentStatusScreen(current)
-                } else {
-                    Text("Could not find torrent.")
+                val accessReason = viewModel.accessReason.collectAsState().value
+
+                when {
+                    current != null -> {
+                        TorrentStatusScreen(current)
+                    }
+                    accessReason == ReleaseScreenViewModel.AccessReason.DOWNLOADING -> {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Initializing torrent...",
+                                style = MaterialTheme.typography.h6
+                            )
+                        }
+                    }
+                    else -> {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text =
+                                    when (accessReason) {
+                                        ReleaseScreenViewModel.AccessReason.RESTRICTED -> "This release is currently restricted"
+                                        ReleaseScreenViewModel.AccessReason.WAITING_PERIOD -> "This release will be available soon"
+                                        ReleaseScreenViewModel.AccessReason.NO_MAGNET -> "Trying to fetch the release..."
+                                        ReleaseScreenViewModel.AccessReason.DOWNLOAD_ERROR -> "Error downloading release"
+                                        ReleaseScreenViewModel.AccessReason.EXCLUSIVE -> "This is an exclusive release"
+                                        null -> "Release not available for download"
+                                        else -> "Loading..."
+                                    },
+                                style = MaterialTheme.typography.h6,
+                                color = MaterialTheme.colors.error
+                            )
+                            if (accessReason == ReleaseScreenViewModel.AccessReason.EXCLUSIVE) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Upgrade to Ultimate to access this release",
+                                    style = MaterialTheme.typography.body2,
+                                    textAlign = TextAlign.Center
+                                )
+                            } else if (accessReason == ReleaseScreenViewModel.AccessReason.WAITING_PERIOD) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Upgrade to Pro to access this release immediately",
+                                    style = MaterialTheme.typography.body2,
+                                    textAlign = TextAlign.Center
+                                )
+                            } else if (accessReason == ReleaseScreenViewModel.AccessReason.NO_MAGNET) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "If you just upgraded your account, new releases might take a while to load.",
+                                    style = MaterialTheme.typography.body2,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -290,18 +359,19 @@ fun Header(
                         contentDescription = null
                     )
                 }
-                IconButton(
-                    onClick = {
-                        navController.navigate(
-                            Screen.Donate.createRoute(publicKey = album.publisher)
-                        )
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingCart,
-                        contentDescription = null
-                    )
-                }
+                // Direct Donations are not allowed at the moment!
+                // IconButton(
+                //     onClick = {
+                //         navController.navigate(
+                //             Screen.Donate.createRoute(publicKey = album.publisher)
+                //         )
+                //     }
+                // ) {
+                //     Icon(
+                //         imageVector = Icons.Default.ShoppingCart,
+                //         contentDescription = null
+                //     )
+                // }
 
                 var expanded by remember { mutableStateOf(false) }
                 Box(modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.TopStart)) {
@@ -324,15 +394,16 @@ fun Header(
                         ) {
                             Text("View Artist")
                         }
-                        DropdownMenuItem(
-                            onClick = {
-                                navController.navigate(
-                                    Screen.Donate.createRoute(publicKey = album.publisher)
-                                )
-                            }
-                        ) {
-                            Text("Donate")
-                        }
+                        // Direct Donations are not allowed at the moment!
+                        // DropdownMenuItem(
+                        //     onClick = {
+                        //         navController.navigate(
+                        //             Screen.Donate.createRoute(publicKey = album.publisher)
+                        //         )
+                        //     }
+                        // ) {
+                        //     Text("Donate")
+                        // }
                         DropdownMenuItem(onClick = { }) {
                             Text("View Meta-data")
                         }

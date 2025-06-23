@@ -1,7 +1,208 @@
 # TrustChain Super App 
-[![Build Status](https://github.com/Tribler/trustchain-superapp/workflows/build/badge.svg)](https://github.com/Tribler/trustchain-superapp/actions) [![ktlint](https://img.shields.io/badge/ktlint%20code--style-%E2%9D%A4-FF4081)](https://pinterest.github.io/ktlint/)
+This repository contains our improvements built on top of **MusicDAO**, an IPv8 app where users can share and discover tracks on the TrustChain. Track streaming, downloading, and seeking interactions are done using JLibTorrent.
 
-This repository contains a collection of Android apps built on top of [IPv8](https://github.com/Tribler/kotlin-ipv8) (our P2P networking stack) and [TrustChain](https://github.com/Tribler/kotlin-ipv8/blob/master/doc/TrustChainCommunity.md) (a scalable, distributed, pair-wise ledger). All applications are built into a single APK, following the concept of [super apps](https://home.kpmg/xx/en/home/insights/2019/06/super-app-or-super-disruption.html) – an emerging trend that provides an ecosystem for multiple services within a single all-in-one app experience.
+The main features we implemented are:
+- **User Account Hierarchy** - created different user account tiers with distinct access and benefits.
+- **Donation Lottery System** - implemented a donation lottery where users donate to artists based on a weighted income function.
+
+The following sections describe implementation details for each feature. Build instructions for this project can be found at the end of the README.
+
+## User Account Hierarchy
+
+### 1. Account Types
+We provide the 3 following account tiers:
+
+1. **Basic Account**: Default for all users. Access to all features, but new releases are delayed by 7 days.
+2. **Pro Account**: Immediate access to new releases and premium features. Upgrade requires a Bitcoin payment (0.1 BTC/month).
+3. **Ultimate Account**: Access to all Pro features plus exclusive content. Upgrade requires a higher Bitcoin payment (0.2 BTC/month).
+
+### 2. Tier Verification with TrustChain
+
+To prevent tier circumvention, all tier upgrades are recorded immutably on the **TrustChain**. Each block contains the user ID, tier, validity period, and is cryptographically signed.
+
+Once written, a tier block is **permanent and tamper-proof**, preserving a secure and transparent history of all tier changes. For completeness, we list below the main advantages of this approach:
+- **Tier Transparency**. Anyone can verify another user's tier by inspecting their TrustChain records. This mechanism forms the foundation of **access control** for tier-restricted features such as **exclusive or new releases**.
+- **Block Validation**. Before being accepted on-chain, each tier block undergoes validation to ensure that all required fields are present and correct.
+- **Payment Verification**. Tier upgrades are only processed **after confirmed Bitcoin payment**, ensuring legitimacy.
+- **Public Key Authentication**. All actions are cryptographically tied to the user's **public key**, guaranteeing that only the rightful account owner can upgrade or downgrade their tier.
+
+
+### 3. Upgrading to Pro or Ultimate
+
+The following steps are executed when a user updates to `Pro`/`Ultimate`:
+1. **Balance Check**: The app checks if their Bitcoin wallet has at least 0.1/0.2 BTC.
+2. **Payment**: 0.1/0.2 BTC is sent to the global donation wallet. This is the same wallet in used in the Donation Lottery System.
+3. **Block Creation**: On successful payment, a `PRO`/`ULTIMATE` tier block is created on TrustChain, valid for the purchased duration (1 month).
+4. **UI Update**: The app updates the account status and refreshes the available releases.
+
+The account tier validations for new/exclusive releases are performed only on the tier blocks whose whose `validFrom` is in the past and `validUntil` is in the future. This ensures that an expired `PRO`/`ULTIMATE` account is reverted back to `BASIC`.
+
+<img src="doc/musicdao/account_hierarchy/upgrade_screen.png" width="280"><img src="doc/musicdao/account_hierarchy/upgrade_screen_pro.png" width="280"><img src="doc/musicdao/account_hierarchy/update_screen_ultimate.png" width="280">
+
+### 4. Tier Access Checks when Requesting a Release
+
+To ensure that account tiers cannot be bypassed (e.g., by directly requesting a magnet link from a peer), the system enforces access control at **two critical points**.
+
+#### **1. Requester-Side Check**
+
+When a user views a release, the app checks their tier and the release’s properties before even attempting to request the magnet link.
+
+**How it works**:
+- If the release is exclusive, only Ultimate users request the magnet link.
+- For non-exclusive releases newer than 7 days, only Pro and Ultimate users request the magnet link. 
+- For non-exclusive releases older than 7 days, all users request the magnet link.
+- If the user does not meet the requirements for a certain release, the UI will not attempt to fetch the magnet link and will show an appropriate message (e.g., "Exclusive", "Waiting Period").
+
+**Purpose**: Prevents the UI from leaking access to restricted content and avoids unnecessary network requests.
+
+**Logic location**: `ReleaseScreenViewModel.kt` and `AlbumRepository.kt`
+
+#### 2. Receiver-Side Check
+
+When a peer receives a magnet link request, it checks the requester's tier (using the public key in the request) before sending the magnet link.
+
+**How it works**:
+- The peer looks up the requester's tier using TrustChain.
+- If the requester is not eligible (e.g., not Ultimate for exclusive, not Pro or past delay for regular), the peer does not send the magnet link.
+- This check is enforced even if the requester tries to bypass the UI or manipulate requests.
+
+**Purpose**: Ensures that even if a user tampers with their client, they cannot obtain restricted content from honest peers.
+
+**Logic location**: `MusicCommunity.kt` (`onMagnetRequest` and `checkUserAccess` methods)
+
+<img src="doc/musicdao/account_hierarchy/request_magnet_diagram.png">
+
+### 5. Sharing Magnet Links P2P and not On-Chain
+
+**Original Approach**  
+In previous iterations of the **MusicDAO** app, magnet links for releases were stored **directly on the blockchain** (TrustChain) as part of the release metadata. This made it easy for any user to fetch the magnet link for any release by simply reading the blockchain.
+
+**Security Problem**  
+In the context of restricted releases, this approach had a critical flaw in terms of tier bypass risk. If a user could read the blockchain, they could access the magnet link for any release, regardless of their account tier. This made it impossible to properly enforce access control for exclusive or early-access content, since the magnet link (and thus the content) was publicly available to all.
+
+**Solution: P2P Magnet Link Sharing**  
+To solve this, we moved magnet link sharing to a **P2P**:
+- The magnet link is **not stored on-chain**.
+- When a user wants to access a release, they request the magnet link from peers who have it.
+- Each peer enforces tier checks before sending the magnet link (see [Receiver-Side Check](#2-receiver-side-check) section).
+
+**Security Benefits**
+- **Enforced Access Control:** Even if a user tries to bypass the UI or manipulate requests, they cannot obtain the magnet link unless a peer verifies their tier and grants access.
+- **No On-Chain Leakage:** The magnet link is never exposed on the blockchain, so it cannot be scraped or accessed by unauthorized users.
+- **Defense in Depth:** Both the requesting client and the serving peer independently enforce tier restrictions, making circumvention virtually impossible for honest nodes.
+
+### User Flows
+To illustrate our feature's user flows, we provide the follwing screen recordings:
+1. Full flow of accessing old, new, and exclusive releases, along with upgrading the account from Basic to Pro and subsequently to Ultimate: <a href="doc/musicdao/account_hierarchy/basic_to_pro_flow.mp4">video</a>
+2. Full flow of accessing old, new, and exclusive releases when directly upgrading from Basic to Ultimate: <a href="doc/musicdao/account_hierarchy/basic_to_ultimate_flow.mp4">video</a>
+
+## Donation Lottery System
+
+### 1. Leader Mode and Role
+
+The donation system is **leader-driven**, meaning only a designated device (the "leader") handles the **collection and redistribution of Bitcoin funds**.
+
+- **Leader Mode Toggle**  
+  The leader mode can be enabled or disabled from `MusicActivity.kt` from the `isManualLeader` flag. Only one leader should be active in a session.
+
+- **Leader Responsibilities**
+    - Collect donations from users.
+    - Aggregate listening data from users.
+    - Run the **weighted donation lottery** to distribute funds to artists proportionally.
+
+### 2. Global Donation Wallet
+
+The **Donation Wallet** is a shared Bitcoin wallet managed by the leader node:
+
+- **Public Visibility**  
+  Any user can view the balance of the donation wallet through the UI.
+
+- **User Donations**  
+  A “Donate” button in the UI allows users to contribute funds (BTC) to the global wallet.  
+<img src="doc/musicdao/donation_lottery/wallet_info.png">
+
+- **Wallet Access**  
+  Managed internally via `DonationWalletManager`, which interfaces with the underlying BitcoinJ wallet.
+
+
+### 3. Sending Listening History to the Leader
+
+Each user tracks how often they listen to each artist locally. Periodically, users send their **listen count history** to the leader in the form:
+
+```kotlin
+{"artistId1":12, "artistId2":3, ...}
+```
+
+The leader collects these values and uses them to determine donation distributions.
+
+
+### 4. Weighted Lottery Distribution
+
+The leader runs the **weighted donation lottery** using:
+```kotlin
+donationWalletManager.runWeightedLottery(listenCounts)
+```
+
+
+- Uses cumulative listen data from all users.
+- Calculates how much each artist should receive based on listen counts using `createBatchSpendExactWeightedBetter(...)` in `WalletService`.
+- Creates and broadcast the Bitcoin transaction.
+
+**Automatic Payouts on Intervals**  
+The `DonationWalletManager` automatically executes the weighted lottery at **fixed time intervals** (e.g., every 10 seconds).  
+These intervals are **configurable**, allowing fine-tuned control over donation timing.
+
+### 5. How The Donation Works
+
+The donation is designed for fair and optimized distribution:
+
+#### Phase One: Equal Distribution (Legacy)
+The earliest implementation used `runLottery()` which split the total wallet balance **equally among all artists**, regardless of their listen count.
+
+- Simple but unfair: artists with more listens received the same amount as those with fewer.
+- Still useful for basic scenarios or testing purposes.
+
+#### Phase Two: Weighted Distribution
+
+##### Naive Approach: `createBatchSpendExactWeighted` (Legacy)
+- Calculates a payout per artist proportional to their listen count (relative weight).
+- Repeats payout reduction if the estimated fee exceeds available balance.
+- Filters out artists whose share is too small.
+- Drawback: runs in **linear time with retries**, which is inefficient and slow as the number of artists grows.
+
+##### Optimized Approach: `createBatchSpendExactWeightedBetter`
+This refined version is faster and smarter. It ensures optimal distribution while keeping fees manageable:
+
+- **Uses binary search to**:
+  - Determine the maximum number of artists that can be paid
+  - Reduce each artist's payout incrementally until the transaction fits within the wallet balance and fee buffer
+- **Skips underfunded artists**:
+  - Any artist whose calculated share falls below a defined minimum (e.g., 5000 satoshis) is excluded
+- **Final result**:
+  - A complete, fee-compliant Bitcoin `Transaction`
+  - A map of artists who were paid and how much they received
+  - A map of artists who were skipped due to low share or insufficient funds
+
+This approach significantly improves performance and scalability, especially when dealing with many artists and a limited donation pool.
+
+
+### 6. Fee Estimation
+
+Located in `WalletService`:
+```kotlin
+fun estimateFee(tx: Transaction): Long
+```
+- Estimates Bitcoin transaction fees based on actual UTXO selection
+- Uses `wallet().completeTx(request)` to sign the transaction without broadcasting it
+- **Throws an error** if the wallet doesn’t have enough funds to cover the transaction
+
+### 6. Demo
+To illustrate how our feature works, we provide the follwing screen recordings:
+1. The donation founds are given to a single user: <a href="doc/musicdao/donation_lottery/lottery_with_1_user.mp4">video</a>
+2. The donation founds are split between two users: <a href="doc/musicdao/donation_lottery/lottery_with_2_users.mp4">video</a>
+
+
+
 
 ## Build Instructions
 
@@ -61,112 +262,3 @@ Apply linter:
 ```
 ./gradlew ktlintFormat
 ```
-
----
-
-## Adding Your Own App
-If you want to add your own app to the TrustChain Super App, you can follow the tutorial in the [AppTutorial.md](doc/AppTutorial.md) document.
-
----
-
-## Apps
-
-### On-Chain Democracy
-We build a DAO for a better world. On-Chain Democracy is an Android application built on top of [IPv8](https://github.com/Tribler/kotlin-ipv8) and [Trustchain](https://github.com/Tribler/kotlin-ipv8/blob/master/doc/TrustChainCommunity.md) and is integrated into the [Trustchain Superapp](https://github.com/Tribler/trustchain-superapp). It is a proof-of-concept implementation of a DAO system using Trustchain and Bitcoin. Trustchain is used for communication and bookkeeping while the Bitcoin blockchain is used to have collective multi-signature wallets for each DAO. The content of the app is split up into several tabs:
-* **First Time Launch**: The first time the app launches, the user must set up their Bitcoin wallet. After which the chain will sync and he is routed to the main screens.
-* **My DAOs**: A list of all DAOs that the user participates in. Selecting a DAO will allow a user to create a transfer proposal from that DAO.
-* **All DAOs**: A list of all discovered DAOs in the network the user can propose to join.
-* **Proposals**: A list of all proposals that the user can vote on. This can either be join proposals or proposals from someone else to transfer funds from one of the DAOs.
-* **My Wallet**: Overview of the used Bitcoin wallet and the ability to chain this to another.
-* **Duplicate Wallet**: In case the user has wallet files for TestNet, Production, or Regtest, the user is allowed to select which one to keep. After the user selects either one, the files belonging to other network types are backed up. This, thus, ensures that the wallet is not lost.
-
-Currently, the On-Chain Democracy app only allows Regtest, since it uses a future update of Bitcoin called Taproot. Once Taproot is officially released, the app can support TestNet or Production again. Taproot allows the DAO to scale to thousands or even millions of users. The beauty of Taproot is that it uses Schnorr signatures for each transaction. This enables transaction sizes that are equal independent of the number of users in a DAO since each user combines their signature collaboratively into one for the whole DAO. This also ensures privacy, since it is no longer possible to tell whether a transaction originates from a single person or from millions.
-
- <img src="currencyii/docs/images/screenshot_7.png" width="200px"> <img src="currencyii/docs/images/screenshot_6.png" width="200px"> <img src="currencyii/docs/images/screenshot_10.png" width="200px">
- <br />
-
- <p float="left">
- <img src="https://user-images.githubusercontent.com/23526224/111478102-0c54dc00-8730-11eb-9fbb-3cd65e2ee7ad.gif" width="200"/>
- <img src="https://user-images.githubusercontent.com/23526224/111478323-42925b80-8730-11eb-9bb9-d90b703385a3.jpeg" width="200"/>
- <img src="https://user-images.githubusercontent.com/23526224/111479002-e2e88000-8730-11eb-9246-dc487e5268b4.jpeg" width="200"/>
- </p>
- <br />
-
-https://user-images.githubusercontent.com/23526224/116259903-85efd900-a776-11eb-93b1-384936d215c4.mp4
-
-
-[More about On-Chain Democracy](currencyii/README.md)
-
-
-### PeerChat
-
-PeerChat implements a fully functional prototype of a distributed messaging app. First, the users have to exchange the public keys by scanning each other's QR code, or by copy-pasting the hexadecimal public keys. This guarantees the authenticity of all messages which are signed by their author. It prevents man-in-the-middle and impersonation attacks.
-
-An online indicator and the last message are shown for each contact. Users can exchange text messages and get acknowledgments when a message is delivered.
-
-<img src="https://user-images.githubusercontent.com/1122874/82873653-1c979280-9f35-11ea-9d47-cea4e134a5b4.png" width="180"> <img src="https://user-images.githubusercontent.com/1122874/82873656-1dc8bf80-9f35-11ea-84b7-7139401560a4.png" width="180"> <img src="https://user-images.githubusercontent.com/1122874/82873659-1ef9ec80-9f35-11ea-95f6-99cbbc0510c9.png" width="180">
-
- <img src="https://user-images.githubusercontent.com/1122874/82873643-1a353880-9f35-11ea-8da3-24ce189c939d.png" width="180"> <img src="https://user-images.githubusercontent.com/1122874/82873661-1f928300-9f35-11ea-9955-6a7488936b02.png" width="180">
-
-### Digital Euro
-
-The Superapp is connected to the European IBAN Euro system.
-You can send and receive digital Euros using QR codes or built-in chat. **Experimental**.
-Sending Euros is as easy as sending an emoji.
-We did a test with a native implementation of Trustchain and [a digital Euro last week](https://twitter.com/TriblerTeam/status/1367526077422256128).
-Field test date: 4 March 2021 at 10:30 am.
-The native Android implementation in Kotlin is slowly getting mature.
-Location: the bar Doerak (with a liquor license! This is a special place, therefore selected as the site for our trial.
-Shops that sell coffee or closed canisters of alcohol are "essential shops" and therefore open in Corona times.) Loading real money on your phone requires an operational an open source [gateway](https://github.com/rwblokzijl/stablecoin-exchange) of Euros to digital Euros.
-Discussed in this master thesis issue: https://github.com/Tribler/tribler/issues/4629
-
-#### Double Spending mitigation
-Double spending in EuroToken occurs when a malicious user sends a transaction to a wallet, and then sends the same transaction to another wallet whilst the second receiver is not aware of the first transaction.
-This has been mitigated by introducing a web-of-trust, read more about this in the [EuroToken README.MD](eurotoken/README.MD)
-
-Creative Commons CC0 license - share freely:
-
-<IMG src="https://user-images.githubusercontent.com/325224/110597367-c1135a00-8180-11eb-9a75-207f4630ebb4.jpg" width=300>
-
-Zooming into the actual mechanism of QR-Codes (Creative Commons CC0 license - share freely)
-
-<IMG src="https://user-images.githubusercontent.com/325224/110597621-15b6d500-8181-11eb-828a-0f3409b6608c.jpg" width=150>
-<img src="https://user-images.githubusercontent.com/446634/107397810-47e00300-6aff-11eb-8abe-5d345a096ade.jpeg" width=200>
-
-![Demo](eurotoken/images/demo.gif)
-
-### Debug
-
-**Debug** shows various information related to connectivity, including:
-
-- The list of bootstrap servers and their health. The server is considered to be alive if we receive a response from it within the last 120 seconds.
-- The number of connected peers in the loaded overlays.
-- The LAN address estimated from the network interface and the WAN address estimated from the packets received from peers outside of our LAN.
-- The public key and member ID (SHA-1 hash of the public key)
-- TrustChain statistics (the number of stored blocks and the length of our chain)
-
-<img src="https://raw.githubusercontent.com/Tribler/kotlin-ipv8/master/doc/demo-android-debug.png" width="180">
-
-### Freedom-of-Computing App
-
-Freedom-of-Computing provides users with the ability to freely distribute and execute code in the form of APK applications on the Trustchain Superapp. To facilitate the sharing of applications, Freedom-of-Computing contains a gossiping mechanism that periodically shares local applications with other users and downloads unseen applications from other users. This sharing is conducted through a torrent peer-to-peer (P2P) network and uses the EVA Protocol as a fallback. Once the application has been downloaded by the users, they can dynamically load and execute it. The application, apart from being an APK file, needs to have a specific format for the execution to work, the requirements/constraints are listed inside [the documentation](freedomOfComputing/README.md).
-
-The left demo shows the upload procedure, while the right demo shows the download and code execution procedure.
-
-<img src="doc/freedomOfComputing/create_torrent.gif" width="280"> <img src="doc/freedomOfComputing/download_seeded_apk.gif" width="280">
-
-[More about Freedom-of-Computing App](freedomOfComputing/README.md)
-
-### MusicDAO
-In short, the MusicDAO  is an IPv8 app where users can share and discover tracks on the trustchain. Track streaming, downloading, and seeking interactions are done using JLibtorrent.
-
-A user can publish a Release (which is an album/EP/single/...), after which the app creates a magnet link referring to these audio tracks. Then, the app creates a proposal block for the Trustchain which contains some metadata (release date, title, ...) this metadata is submitted by the user with a dialog. When a signed block is discovered (currently self-signed), the app tries to obtain the file list using JLibtorrent. Each file can be streamed independently by clicking the _play_ button.
-
-<img src="doc/musicdao/screen2.png" width="280"> <img src="doc/musicdao/screen1.png" width="280"> <img src="doc/musicdao/screen3.png" width="280">
-
-
-**Videos**
-
-Video 1: <a href="doc/musicdao/thesis2.mp4">Load example.</a> This uses a default magnet link for an album that has a decent amount of peers. The user submits the metadata and the block gets proposed and signed. Then playback.
-
-Video 2: <a href="doc/musicdao/thesis3.mp4">Share track.</a> Note: as a fresh magnet link is generated in this video, there is only 1 peer. For this reason, it will be difficult to obtain the metadata of the magnet link (cold start issues) so the video stops there.

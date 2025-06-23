@@ -7,6 +7,7 @@ import android.os.IBinder
 import nl.tudelft.trustchain.musicdao.core.ipv8.ArtistBlockGossiper
 import nl.tudelft.trustchain.musicdao.core.ipv8.MusicCommunity
 import nl.tudelft.trustchain.musicdao.core.ipv8.ReleaseBlockGossiper
+import nl.tudelft.trustchain.musicdao.core.ipv8.UserTierBlockGossiper
 import nl.tudelft.trustchain.musicdao.core.ipv8.SwarmHealth
 import com.frostwire.jlibtorrent.Sha1Hash
 import dagger.hilt.android.AndroidEntryPoint
@@ -33,6 +34,9 @@ class MusicGossipingService : Service() {
     @Inject
     lateinit var artistBlockGossiper: ArtistBlockGossiper
 
+    @Inject
+    lateinit var userTierBlockGossiper: UserTierBlockGossiper
+
     /**
      * Class used for the client Binder.  Because we know this service always
      * runs in the same process as its clients, we don't need to deal with IPC.
@@ -58,6 +62,7 @@ class MusicGossipingService : Service() {
         super.onCreate()
         releaseBlockGossiper.startGossip(scope)
         artistBlockGossiper.startGossip(scope)
+        userTierBlockGossiper.startGossip(scope)
         scope.launch {
             iterativelyGossipSwarmHealth()
         }
