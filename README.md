@@ -198,8 +198,8 @@ fun estimateFee(tx: Transaction): Long
 
 ### 6. Demo
 To illustrate how our feature works, we provide the follwing screen recordings:
-1. The donation founds are given to a single user: <a href="doc/musicdao/donation_lottery/basic_to_pro_flow.mp4">video</a>
-2. The donation founds are split between two users: <a href="doc/musicdao/donation_lottery/basic_to_ultimate_flow.mp4">video</a>
+1. The donation founds are given to a single user: <a href="doc/musicdao/donation_lottery/lottery_with_1_user.mp4">video</a>
+2. The donation founds are split between two users: <a href="doc/musicdao/donation_lottery/lottery_with_2_users.mp4">video</a>
 
 
 
